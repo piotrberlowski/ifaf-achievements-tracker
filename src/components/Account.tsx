@@ -34,7 +34,9 @@ export default function Account({
             className="btn btn-ghost btn-neutral btn-sm"
             onClick={() => {
               authClient
-                .signOut()
+                .signOut({
+                  callbackURL: `${window.location.origin}/`,
+                })
                 .then(() => router.refresh())
                 .catch((error: unknown) => {
                   console.error("Failed to sign out:", error);
