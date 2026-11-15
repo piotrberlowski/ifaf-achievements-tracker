@@ -1,16 +1,6 @@
+import Navigation from "@/components/Navigation";
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: "IFAF achievements",
@@ -23,11 +13,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="en">
+      <body className="relative flex h-dvh w-full flex-col px-2">
+        <div className="flex flex-none">
+          <Navigation className="flex-1" />
+        </div>
+        <main className="relative mx-auto h-full w-full items-center bg-base-100 align-top lg:w-5/6 xl:w-3/4">
+          {children}
+        </main>
+      </body>
     </html>
   );
 }

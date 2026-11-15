@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",
+    "@heroicons/react": "^2.2.0",
     "@prisma/adapter-pg": "6.19.0",
     "@prisma/client": "6.19.0",
     "better-auth": "^1.7.23",
+    "daisyui": "^5.8.0",
     "next": "16.4.6",
     "pg": "^8.23.1",
     "react": "19.3.0",
