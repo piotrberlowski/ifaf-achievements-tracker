@@ -143,7 +143,9 @@ Every public filter is a query string, so a support reply is a link. Public page
 
 arc-comp 1.7.1 is Next.js 16, React 19, Prisma 6.19 with the `pg` driver adapter, Tailwind 4, Zod, and pnpm. Its login is Auth.js 5 beta, with Google, Auth0, and Discord. This app keeps that runtime. Login is Better Auth with Google and Auth0, using Better Auth’s own user and session tables. Discord is omitted.
 
-Environment names match arc-comp: `DB_POSTGRES_PRISMA_URL` (pooled, runtime), `DB_POSTGRES_URL_NON_POOLING` (migrations), plus `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_AUTH0_ID`, `AUTH_AUTH0_SECRET`, and `AUTH_AUTH0_ISSUER`.
+The public hosts are `https://gains.fieldarchery.app` and `https://records.fieldarchery.app`. Both serve this app. Production `BETTER_AUTH_URL` is `https://gains.fieldarchery.app`. Google and Auth0 callbacks are registered on both hosts: `https://gains.fieldarchery.app/api/auth/callback/google`, `https://records.fieldarchery.app/api/auth/callback/google`, `https://gains.fieldarchery.app/api/auth/callback/auth0`, and `https://records.fieldarchery.app/api/auth/callback/auth0`. Auth0 Allowed Logout URLs are `http://localhost:3000/`, `https://gains.fieldarchery.app/`, and `https://records.fieldarchery.app/`. Sign-out sends the browser back to the host it left. Records is a trusted origin because production `BETTER_AUTH_URL` is only the gains host.
+
+Environment names are `IFAF_AT_POSTGRES_PRISMA_URL` (pooled, runtime), `IFAF_AT_POSTGRES_URL_NON_POOLING` (migrations), `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `AUTH_AUTH0_ID`, `AUTH_AUTH0_SECRET`, `AUTH_AUTH0_ISSUER`, and `SYSTEM_ADMIN_EMAILS`.
 
 | Choice | Neon Free | Prisma Postgres Free | For IFAF |
 | --- | --- | --- | --- |
