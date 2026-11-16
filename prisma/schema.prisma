@@ -18,9 +18,23 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  permissions   PermissionGrant[]
 
   @@unique([email])
   @@map("user")
+}
+
+model PermissionGrant {
+  id         String   @id
+  userId     String
+  permission String
+  grantedBy  String?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, permission])
+  @@index([userId])
+  @@map("permission_grant")
 }
 
 model Session {
