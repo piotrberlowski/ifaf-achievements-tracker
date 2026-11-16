@@ -18,8 +18,8 @@ function createAuth() {
     database: prismaAdapter(getPrisma(), {
       provider: "postgresql",
     }),
-    secret: process.env.BETTER_AUTH_SECRET,
-    baseURL: process.env.BETTER_AUTH_URL,
+    secret: process.env.BETTER_AUTH_SECRET ?? "development-only-set-BETTER_AUTH_SECRET",
+    baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
     socialProviders:
       googleId && googleSecret
         ? {
