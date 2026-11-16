@@ -59,8 +59,9 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | GainAward, GainScoreAllocation | One pin of each level per class and track, and the classifying scores that earned it. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
 | Achievement | A new pin or a record change. `recognisedOn` is when it became official | Approval, or a later amendment |
 | Changelog entry | The GAINS pins and record changes that became official on one date. Generated when the secretary approves a submission or amends an entry | Approval or amendment |
-| UserRole, MembershipClaim | Roles live in the database. OAuth identity does not imply a membership number | IT admin and secretary |
-| IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | IT admin |
+| Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
+| MembershipClaim | A request to attach a sign-in account to a membership number | Archer, then an account with `claims.approve` |
+| IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | Account with `integrations.manage` |
 
 Scores and records are append-only. An amendment voids the original score and writes a replacement.
 
@@ -119,12 +120,12 @@ These sentences are in the GAINS Info sheet.
 | Person | Route | Gate |
 | --- | --- | --- |
 | Archer setting a goal | `/gains?round=field&class=AMBH-R` | Public |
-| Archer | `/archers/IRE_22008` for any member. `/me` after the membership secretary approves that account’s claim | Public page, or an approved membership claim for `/me` |
+| Archer | `/archers/IRE_22008` for any member. `/me` after an account with `claims.approve` accepts that account’s claim | Public page, or an approved membership claim for `/me` |
 | Archer checking records held | The same archer page | Public |
-| Membership secretary | `/review?status=pending`. Upload a result, modify a submission, approve the whole submission, or amend an official entry | Role `membership_secretary` |
+| Submission reviewer | `/review?status=pending`. Upload a result, modify a submission, approve the whole submission, or amend an official entry | Permission `submissions.approve` |
 | Anyone | `/changelog`, and `/changelog/2026-11-14` for one day | Public |
 | PRO | Sends the public link for a day’s changelog, `/changelog/2026-11-14` | Public page |
-| IT admin | Query-string filters. Roles and API keys under `/admin` | Role `it_admin`, seeded from `IT_ADMIN_EMAILS` |
+| System administrator | `/admin`. Grants and revokes permissions on other accounts, and can issue competition-app credentials | Permission `system.admin`, bootstrapped from `SYSTEM_ADMIN_EMAILS` |
 | Competition app | `POST /api/v1/tournaments` with the full tournament as JSON | Issued credential, for example an mTLS client certificate. The submission stays pending |
 
 Every public filter is a query string, so a support reply is a link. Public pages cache for an hour and refresh when a secretary approves a submission or amends an entry.
@@ -169,7 +170,7 @@ Environment names match arc-comp: `DB_POSTGRES_PRISMA_URL` (pooled, runtime), `D
 
 All three intakes become the same pending submission. An unknown class or round stays on that submission for the secretary to correct. Nothing is published until the secretary approves the whole submission. Sending the same tournament again, with the same external id, returns the original submission.
 
-The competition app posts one JSON document for the whole tournament: the competition, every round shot, and every archer’s score. arc-comp already has the membership number, age group, equipment category, club, and score, plus `IFAFBowStyleMapping` and `IFAFAgeGenderMapping`, so it can fill `classCode` and `roundCode`. IT admin issues that app a credential. An mTLS client certificate is the form we issue: the private key is shown once at issuance and is not stored. Revoking the credential stops the app. The endpoint is `POST /api/v1/tournaments`.
+The competition app posts one JSON document for the whole tournament: the competition, every round shot, and every archer’s score. arc-comp already has the membership number, age group, equipment category, club, and score, plus `IFAFBowStyleMapping` and `IFAFAgeGenderMapping`, so it can fill `classCode` and `roundCode`. An account with `integrations.manage` issues that app a credential. An mTLS client certificate is the form issued: the private key is shown once at issuance and is not stored. Revoking the credential stops the app. The endpoint is `POST /api/v1/tournaments`.
 
 | JSON field | Required | Notes |
 | --- | --- | --- |
@@ -185,19 +186,33 @@ The secretary can upload the same tournament without the app.
 - CSV is the clean file. One row per score: competition name, date, round code, membership number, archer name, club, class code, score.
 - IFAF XLSX is the workbook already in use. It is accepted during the transition and parsed into the same submission.
 
+## System administrator
+
+The first accounts are created from `SYSTEM_ADMIN_EMAILS`. When someone signs in with one of those email addresses, that account receives `system.admin`. A system administrator opens `/admin` and grants permissions to other signed-in accounts. The permissions are:
+
+| Permission | What it allows |
+| --- | --- |
+| `system.admin` | Grant and revoke every permission, including this one |
+| `claims.approve` | Approve or reject a membership claim |
+| `names.approve` | Approve a new official name on a membership number |
+| `submissions.approve` | Upload, modify, approve, and amend tournament submissions |
+| `integrations.manage` | Issue and revoke a competition app’s credential |
+
+A person can hold more than one of these. Holding one does not include the others.
+
 ## Member accounts
 
-An archer signs in with Google or Auth0 and opens `/me`. The account has no membership number until the archer submits a claim for one, for example `IRE_22008`. The membership secretary approves or rejects that claim. After approval, `/me` shows that member’s pins, the next score on each track, and the records they hold. The secretary can later approve a new official name for that membership number. The previous name is kept, with who approved the change and when. Public pages for that number then show the new name.
+An archer signs in with Google or Auth0 and opens `/me`. The account has no membership number until the archer submits a claim for one, for example `IRE_22008`. An account with `claims.approve` approves or rejects that claim. After approval, `/me` shows that member’s pins, the next score on each track, and the records they hold. An account with `names.approve` can approve a new official name for that membership number. The previous name is kept, with who approved the change and when. Public pages for that number then show the new name.
 
 `/archers/IRE_22008` shows the same pins and records without a sign-in.
 
 ## Tournament review
 
-A tournament becomes one pending submission, from the competition app’s JSON, a CSV upload, or an IFAF workbook upload. The membership secretary opens it in `/review`, edits the competition details and any entry, and adds or removes entries. The submission shows discrepancy suggestions: the same person on another number, or the same number with a different name, club, bow style, age division, or gender from their recent scores. Those suggestions stay visible and the secretary can still approve.
+A tournament becomes one pending submission, from the competition app’s JSON, a CSV upload, or an IFAF workbook upload. An account with `submissions.approve` opens it in `/review`, edits the competition details and any entry, and adds or removes entries. The submission shows discrepancy suggestions: the same person on another number, or the same number with a different name, club, bow style, age division, or gender from their recent scores. Those suggestions stay visible and the reviewer can still approve.
 
 Approval applies to the whole submission. It is refused while an entry is incomplete or names an unknown class or round. Approval writes every score, classifies each one against the record for its round type on the day it was shot, replaces a record when the score is strictly higher, recalculates awards, and adds the day’s changelog entry.
 
-After approval the secretary can amend one entry. The amendment replaces that score and recalculates the record and the awards for the people affected.
+After approval that same permission can amend one entry. The amendment replaces that score and recalculates the record and the awards for the people affected.
 
 ## Implementation plan
 
@@ -235,13 +250,13 @@ Idempotent seed for 12 styles, 12 divisions, 144 classes, 12 rounds, and the thr
 
 `/records`, `/gains`, and `/archers/[membershipNumber]`, cached for an hour. A class with no record says so. Done when a browser check, desktop and narrow, filters by round, bow style, and age division, opens an archer, and shows the next required score. The public day-by-day list is `/changelog`, built in phase 10.
 
-### 8. Member accounts
+### 8. System administrator and member accounts
 
-Google and Auth0 sign-in, `/me`, and a membership claim the secretary approves or rejects. Approving a claim shows that member’s pins, next scores, and records on `/me`. Approving a name change stores the previous name and the new official name. Done when `/me` is empty before approval and shows that member’s page after it.
+Google and Auth0 sign-in. An email in `SYSTEM_ADMIN_EMAILS` receives `system.admin` on first sign-in. `/admin` grants `claims.approve`, `names.approve`, `submissions.approve`, and `integrations.manage` to other accounts. `/me` and membership claims work as described above. Done when a listed email can sign in and grant `claims.approve`, and `/me` stays empty until that permission approves the claim.
 
 ### 9. Tournament review
 
-`/review` lists pending submissions. The secretary edits a submission, sees the discrepancy suggestions, and approves or rejects the whole submission. Approval writes the scores, updates records, recalculates awards, and adds the changelog entry. An amendment after approval replaces one score and recalculates. Done when a pending submission is absent from the public pages, the suggestions are visible, and approving the submission publishes every entry.
+`/review` lists pending submissions for accounts with `submissions.approve`. The reviewer edits a submission, sees the discrepancy suggestions, and approves or rejects the whole submission. Approval writes the scores, updates records, recalculates awards, and adds the changelog entry. An amendment after approval replaces one score and recalculates. Done when an account without the permission cannot open the queue, a pending submission is absent from the public pages, and approving the submission publishes every entry.
 
 ### 10. Public changelog
 
