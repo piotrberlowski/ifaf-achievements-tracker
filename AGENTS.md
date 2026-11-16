@@ -7,3 +7,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Database
+
+Follow [Database development](README.md#database-development) before changing the schema or running Prisma. Load `.env.local` with `pnpm exec dotenv -e .env.local --override --`, or use `pnpm db:migrate`, `pnpm db:reset`, `pnpm db:status`, and `pnpm db:deploy`. `prisma migrate dev` writes and applies a migration. `prisma migrate reset` returns the local database to a blank state and migrates it forward. Reset and migrate that local database only. Schema work stays inside those Prisma commands.
