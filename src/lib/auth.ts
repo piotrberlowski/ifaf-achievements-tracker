@@ -20,9 +20,12 @@ function createAuth() {
     }),
     secret: process.env.BETTER_AUTH_SECRET ?? "development-only-set-BETTER_AUTH_SECRET",
     baseURL: process.env.BETTER_AUTH_URL || "http://localhost:3000",
-    // Production BETTER_AUTH_URL is the gains host. Records serves this same
-    // app, so sign-in and sign-out from that host must be trusted too.
-    trustedOrigins: ["https://records.fieldarchery.app"],
+    // Production BETTER_AUTH_URL is the gains host. Records and staging serve
+    // this same app, so sign-in and sign-out from those hosts must be trusted too.
+    trustedOrigins: [
+      "https://records.fieldarchery.app",
+      "https://gains-staging.fieldarchery.app",
+    ],
     socialProviders:
       googleId && googleSecret
         ? {
