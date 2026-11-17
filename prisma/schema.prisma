@@ -371,33 +371,32 @@ model Discrepancy {
 }
 
 model Score {
-  id                  String                @id @default(cuid())
+  id                  String             @id @default(cuid())
   personId            String
   shootingClassId     String
   roundId             String
   competitionId       String?
   submissionId        String?
-  submissionEntryId   String?               @unique
+  submissionEntryId   String?            @unique
   score               Int
-  shotOn              DateTime?             @db.Date
+  shotOn              DateTime?          @db.Date
   shotLabel           String?
   band                AwardBand?
   thresholdScheduleId String?
   recordScoreSnapshot Int?
   approvedById        String?
-  createdAt           DateTime              @default(now())
-  person              Person                @relation(fields: [personId], references: [id], onDelete: Restrict)
-  shootingClass       ShootingClass         @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
-  round               Round                 @relation(fields: [roundId], references: [id], onDelete: Restrict)
-  competition         Competition?          @relation(fields: [competitionId], references: [id], onDelete: Restrict)
-  submission          ScoreSubmission?      @relation(fields: [submissionId], references: [id], onDelete: Restrict)
-  submissionEntry     SubmissionEntry?      @relation(fields: [submissionEntryId], references: [id], onDelete: Restrict)
-  thresholdSchedule   ThresholdSchedule?    @relation(fields: [thresholdScheduleId], references: [id], onDelete: Restrict)
-  approvedBy          User?                 @relation("ScoreApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-  voidance            ScoreVoid?            @relation("VoidedScore")
-  replacementFor      ScoreVoid?            @relation("ReplacementScore")
+  createdAt           DateTime           @default(now())
+  person              Person             @relation(fields: [personId], references: [id], onDelete: Restrict)
+  shootingClass       ShootingClass      @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  round               Round              @relation(fields: [roundId], references: [id], onDelete: Restrict)
+  competition         Competition?       @relation(fields: [competitionId], references: [id], onDelete: Restrict)
+  submission          ScoreSubmission?   @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  submissionEntry     SubmissionEntry?   @relation(fields: [submissionEntryId], references: [id], onDelete: Restrict)
+  thresholdSchedule   ThresholdSchedule? @relation(fields: [thresholdScheduleId], references: [id], onDelete: Restrict)
+  approvedBy          User?              @relation("ScoreApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  voidance            ScoreVoid?         @relation("VoidedScore")
+  replacementFor      ScoreVoid?         @relation("ReplacementScore")
   record              RecordStanding?
-  allocations         GainScoreAllocation[]
   achievements        Achievement[]
 
   @@index([personId, shootingClassId, roundId])
@@ -460,35 +459,22 @@ model ThresholdSchedule {
 }
 
 model GainAward {
-  id              String                @id @default(cuid())
+  id              String        @id @default(cuid())
   personId        String
   shootingClassId String
   awardTrackId    String
   level           AwardLevel
   source          AwardSource
-  recognisedOn    DateTime?             @db.Date
-  achievementId   String?               @unique
-  createdAt       DateTime              @default(now())
-  person          Person                @relation(fields: [personId], references: [id], onDelete: Restrict)
-  shootingClass   ShootingClass         @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
-  awardTrack      AwardTrack            @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
-  achievement     Achievement?          @relation(fields: [achievementId], references: [id], onDelete: Restrict)
-  allocations     GainScoreAllocation[]
+  issuedOn        DateTime?     @db.Date
+  achievementId   String?       @unique
+  createdAt       DateTime      @default(now())
+  person          Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
+  shootingClass   ShootingClass @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  awardTrack      AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
+  achievement     Achievement?  @relation(fields: [achievementId], references: [id], onDelete: Restrict)
 
   @@unique([personId, shootingClassId, awardTrackId, level])
   @@map("gain_award")
-}
-
-model GainScoreAllocation {
-  id          String    @id @default(cuid())
-  gainAwardId String
-  scoreId     String
-  createdAt   DateTime  @default(now())
-  gainAward   GainAward @relation(fields: [gainAwardId], references: [id], onDelete: Restrict)
-  score       Score     @relation(fields: [scoreId], references: [id], onDelete: Restrict)
-
-  @@unique([gainAwardId, scoreId])
-  @@map("gain_score_allocation")
 }
 
 model ChangelogDay {

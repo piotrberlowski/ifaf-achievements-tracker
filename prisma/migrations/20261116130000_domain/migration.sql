@@ -249,21 +249,11 @@ CREATE TABLE "gain_award" (
     "awardTrackId" TEXT NOT NULL,
     "level" "award_level" NOT NULL,
     "source" "award_source" NOT NULL,
-    "recognisedOn" DATE,
+    "issuedOn" DATE,
     "achievementId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "gain_award_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "gain_score_allocation" (
-    "id" TEXT NOT NULL,
-    "gainAwardId" TEXT NOT NULL,
-    "scoreId" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "gain_score_allocation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -397,9 +387,6 @@ CREATE UNIQUE INDEX "gain_award_achievementId_key" ON "gain_award"("achievementI
 CREATE UNIQUE INDEX "gain_award_personId_shootingClassId_awardTrackId_level_key" ON "gain_award"("personId", "shootingClassId", "awardTrackId", "level");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "gain_score_allocation_gainAwardId_scoreId_key" ON "gain_score_allocation"("gainAwardId", "scoreId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "changelog_day_recognisedOn_key" ON "changelog_day"("recognisedOn");
 
 -- CreateIndex
@@ -527,12 +514,6 @@ ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_awardTrackId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_achievementId_fkey" FOREIGN KEY ("achievementId") REFERENCES "achievement"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gain_score_allocation" ADD CONSTRAINT "gain_score_allocation_gainAwardId_fkey" FOREIGN KEY ("gainAwardId") REFERENCES "gain_award"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gain_score_allocation" ADD CONSTRAINT "gain_score_allocation_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "achievement" ADD CONSTRAINT "achievement_changelogDayId_fkey" FOREIGN KEY ("changelogDayId") REFERENCES "changelog_day"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

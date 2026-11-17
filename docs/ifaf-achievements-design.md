@@ -56,7 +56,7 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | Score | Approved fact, band snapshot, void pointer for an amendment | Approval of the submission, or a later amendment |
 | RecordStanding | Best score for one round type, bow style, and age division. A strictly higher approved score replaces it | Import, then approval |
 | ThresholdSchedule | Effective-dated Star, Gold, Silver, Bronze | Engine, when a record changes |
-| GainAward, GainScoreAllocation | One pin of each level per class and track, and the classifying scores that earned it. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
+| GainAward | One pin of each level per person, class, and track, with the date it was issued. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
 | Achievement | A new pin or a record change. `recognisedOn` is when it became official | Approval, or a later amendment |
 | Changelog entry | The GAINS pins and record changes that became official on one date. Generated when the secretary approves a submission or amends an entry | Approval or amendment |
 | Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
