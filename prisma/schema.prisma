@@ -192,8 +192,7 @@ model Person {
 model PersonName {
   id           String    @id @default(cuid())
   personId     String
-  givenName    String
-  surname      String
+  fullName     String
   note         String?
   approvedById String?
   approvedAt   DateTime?
@@ -202,7 +201,7 @@ model PersonName {
   approvedBy   User?     @relation("NameApprover", fields: [approvedById], references: [id], onDelete: Restrict)
 
   @@index([personId, approvedAt])
-  @@index([surname, givenName])
+  @@index([fullName])
   @@map("person_name")
 }
 

@@ -40,8 +40,7 @@ CREATE TABLE "person" (
 CREATE TABLE "person_name" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
-    "givenName" TEXT NOT NULL,
-    "surname" TEXT NOT NULL,
+    "fullName" TEXT NOT NULL,
     "note" TEXT,
     "approvedById" TEXT,
     "approvedAt" TIMESTAMP(3),
@@ -317,7 +316,7 @@ CREATE UNIQUE INDEX "person_membershipNumber_key" ON "person"("membershipNumber"
 CREATE INDEX "person_name_personId_approvedAt_idx" ON "person_name"("personId", "approvedAt");
 
 -- CreateIndex
-CREATE INDEX "person_name_surname_givenName_idx" ON "person_name"("surname", "givenName");
+CREATE INDEX "person_name_fullName_idx" ON "person_name"("fullName");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "bow_style_code_key" ON "bow_style"("code");
