@@ -47,7 +47,7 @@ The award key is **person + shooting class + award track**. A shooting class is 
 
 | Entity | Holds | Written by |
 | --- | --- | --- |
-| Person, PersonName | Membership number is unique per person after rectification. The current official name is the latest approved name. Each earlier name is kept, with who approved the change and when | Import, identity corrections, and a secretary name change |
+| Person, PersonName | Membership number is unique per person after rectification. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import, identity corrections, and a secretary name change |
 | BowStyle, AgeDivision, ShootingClass | 12 styles, 12 divisions, 144 codes. Longest age prefix wins (`YAM` before `AM`) | Seed |
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
 | Competition | Name, date or label, external id from arc-comp | Import and API |
