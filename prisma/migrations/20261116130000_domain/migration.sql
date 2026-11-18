@@ -145,7 +145,6 @@ CREATE TABLE "score_submission" (
 CREATE TABLE "submission_entry" (
     "id" TEXT NOT NULL,
     "submissionId" TEXT NOT NULL,
-    "externalResultId" TEXT,
     "membershipNumber" TEXT NOT NULL,
     "archerName" TEXT NOT NULL,
     "club" TEXT,
@@ -154,9 +153,6 @@ CREATE TABLE "submission_entry" (
     "roundCode" TEXT NOT NULL,
     "roundId" TEXT,
     "score" INTEGER,
-    "shotOn" DATE,
-    "shotLabel" TEXT,
-    "sortOrder" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -173,8 +169,6 @@ CREATE TABLE "score" (
     "submissionId" TEXT,
     "submissionEntryId" TEXT,
     "score" INTEGER NOT NULL,
-    "shotOn" DATE,
-    "shotLabel" TEXT,
     "band" "award_band",
     "thresholdScheduleId" TEXT,
     "recordScoreSnapshot" INTEGER,
@@ -333,16 +327,10 @@ CREATE UNIQUE INDEX "score_submission_integrationClientId_externalId_key" ON "sc
 CREATE INDEX "submission_entry_submissionId_idx" ON "submission_entry"("submissionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "submission_entry_submissionId_externalResultId_key" ON "submission_entry"("submissionId", "externalResultId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "score_submissionEntryId_key" ON "score"("submissionEntryId");
 
 -- CreateIndex
 CREATE INDEX "score_personId_shootingClassId_roundId_idx" ON "score"("personId", "shootingClassId", "roundId");
-
--- CreateIndex
-CREATE INDEX "score_shotOn_idx" ON "score"("shotOn");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "score_void_scoreId_key" ON "score_void"("scoreId");

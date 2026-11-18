@@ -319,7 +319,6 @@ model ScoreSubmission {
 model SubmissionEntry {
   id               String          @id @default(cuid())
   submissionId     String
-  externalResultId String?
   membershipNumber String
   archerName       String
   club             String?
@@ -328,9 +327,6 @@ model SubmissionEntry {
   roundCode        String
   roundId          String?
   score            Int?
-  shotOn           DateTime?       @db.Date
-  shotLabel        String?
-  sortOrder        Int
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   submission       ScoreSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
@@ -338,7 +334,6 @@ model SubmissionEntry {
   round            Round?          @relation(fields: [roundId], references: [id], onDelete: Restrict)
   approvedScore    Score?
 
-  @@unique([submissionId, externalResultId])
   @@index([submissionId])
   @@map("submission_entry")
 }
@@ -352,8 +347,6 @@ model Score {
   submissionId        String?
   submissionEntryId   String?            @unique
   score               Int
-  shotOn              DateTime?          @db.Date
-  shotLabel           String?
   band                AwardBand?
   thresholdScheduleId String?
   recordScoreSnapshot Int?
@@ -373,7 +366,6 @@ model Score {
   achievements        Achievement[]
 
   @@index([personId, shootingClassId, roundId])
-  @@index([shotOn])
   @@map("score")
 }
 
