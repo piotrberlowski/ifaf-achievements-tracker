@@ -114,6 +114,8 @@ CREATE TABLE "competition" (
     "name" TEXT NOT NULL,
     "startsOn" DATE,
     "label" TEXT,
+    "roundCode" TEXT NOT NULL,
+    "roundId" TEXT,
     "externalId" TEXT,
     "integrationClientId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -150,8 +152,6 @@ CREATE TABLE "submission_entry" (
     "club" TEXT,
     "classCode" TEXT NOT NULL,
     "shootingClassId" TEXT,
-    "roundCode" TEXT NOT NULL,
-    "roundId" TEXT,
     "score" INTEGER,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -164,9 +164,7 @@ CREATE TABLE "score" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
     "shootingClassId" TEXT NOT NULL,
-    "roundId" TEXT NOT NULL,
-    "competitionId" TEXT,
-    "submissionId" TEXT,
+    "competitionId" TEXT NOT NULL,
     "submissionEntryId" TEXT,
     "score" INTEGER NOT NULL,
     "band" "award_band",
@@ -330,7 +328,10 @@ CREATE INDEX "submission_entry_submissionId_idx" ON "submission_entry"("submissi
 CREATE UNIQUE INDEX "score_submissionEntryId_key" ON "score"("submissionEntryId");
 
 -- CreateIndex
-CREATE INDEX "score_personId_shootingClassId_roundId_idx" ON "score"("personId", "shootingClassId", "roundId");
+CREATE INDEX "score_personId_shootingClassId_idx" ON "score"("personId", "shootingClassId");
+
+-- CreateIndex
+CREATE INDEX "score_competitionId_idx" ON "score"("competitionId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "score_void_scoreId_key" ON "score_void"("scoreId");
@@ -393,6 +394,9 @@ ALTER TABLE "integration_client" ADD CONSTRAINT "integration_client_issuedById_f
 ALTER TABLE "competition" ADD CONSTRAINT "competition_integrationClientId_fkey" FOREIGN KEY ("integrationClientId") REFERENCES "integration_client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "competition" ADD CONSTRAINT "competition_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "score_submission" ADD CONSTRAINT "score_submission_competitionId_fkey" FOREIGN KEY ("competitionId") REFERENCES "competition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -411,22 +415,13 @@ ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_submissionId_fke
 ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "score" ADD CONSTRAINT "score_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_competitionId_fkey" FOREIGN KEY ("competitionId") REFERENCES "competition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "score" ADD CONSTRAINT "score_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "score_submission"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_submissionEntryId_fkey" FOREIGN KEY ("submissionEntryId") REFERENCES "submission_entry"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
