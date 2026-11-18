@@ -22,9 +22,6 @@ CREATE TYPE "award_source" AS ENUM ('tracker', 'engine');
 -- CreateEnum
 CREATE TYPE "achievement_kind" AS ENUM ('pin', 'record');
 
--- CreateEnum
-CREATE TYPE "discrepancy_kind" AS ENUM ('same_person_other_number', 'different_name', 'different_club', 'different_bow_style', 'different_age_division', 'different_gender');
-
 -- CreateTable
 CREATE TABLE "person" (
     "id" TEXT NOT NULL,
@@ -164,18 +161,6 @@ CREATE TABLE "submission_entry" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "submission_entry_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "discrepancy" (
-    "id" TEXT NOT NULL,
-    "submissionId" TEXT NOT NULL,
-    "submissionEntryId" TEXT NOT NULL,
-    "kind" "discrepancy_kind" NOT NULL,
-    "detail" TEXT NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "discrepancy_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -351,9 +336,6 @@ CREATE INDEX "submission_entry_submissionId_idx" ON "submission_entry"("submissi
 CREATE UNIQUE INDEX "submission_entry_submissionId_externalResultId_key" ON "submission_entry"("submissionId", "externalResultId");
 
 -- CreateIndex
-CREATE INDEX "discrepancy_submissionEntryId_idx" ON "discrepancy"("submissionEntryId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "score_submissionEntryId_key" ON "score"("submissionEntryId");
 
 -- CreateIndex
@@ -442,12 +424,6 @@ ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_shootingClassId_
 
 -- AddForeignKey
 ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "discrepancy" ADD CONSTRAINT "discrepancy_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "score_submission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "discrepancy" ADD CONSTRAINT "discrepancy_submissionEntryId_fkey" FOREIGN KEY ("submissionEntryId") REFERENCES "submission_entry"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
