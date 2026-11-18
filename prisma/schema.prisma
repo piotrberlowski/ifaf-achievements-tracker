@@ -345,7 +345,6 @@ model Score {
   score               Int
   band                AwardBand?
   thresholdScheduleId String?
-  recordScoreSnapshot Int?
   approvedById        String?
   createdAt           DateTime           @default(now())
   person              Person             @relation(fields: [personId], references: [id], onDelete: Restrict)

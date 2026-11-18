@@ -169,7 +169,6 @@ CREATE TABLE "score" (
     "score" INTEGER NOT NULL,
     "band" "award_band",
     "thresholdScheduleId" TEXT,
-    "recordScoreSnapshot" INTEGER,
     "approvedById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
