@@ -11,22 +11,15 @@ CREATE TYPE "submission_source" AS ENUM ('api', 'csv', 'xlsx', 'import');
 CREATE TYPE "claim_status" AS ENUM ('pending', 'approved', 'rejected');
 
 -- CreateEnum
-CREATE TYPE "award_band" AS ENUM ('bronze', 'silver', 'gold', 'star');
-
--- CreateEnum
 CREATE TYPE "award_level" AS ENUM ('bronze', 'silver', 'gold', 'hotshot', 'star');
 
 -- CreateEnum
 CREATE TYPE "award_source" AS ENUM ('tracker', 'engine');
 
--- CreateEnum
-CREATE TYPE "achievement_kind" AS ENUM ('pin', 'record');
-
 -- CreateTable
 CREATE TABLE "person" (
     "id" TEXT NOT NULL,
     "membershipNumber" TEXT NOT NULL,
-    "club" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -113,11 +106,8 @@ CREATE TABLE "competition" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "startsOn" DATE,
-    "label" TEXT,
     "roundCode" TEXT NOT NULL,
     "roundId" TEXT,
-    "externalId" TEXT,
-    "integrationClientId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -130,7 +120,6 @@ CREATE TABLE "score_submission" (
     "competitionId" TEXT NOT NULL,
     "status" "submission_status" NOT NULL DEFAULT 'pending',
     "source" "submission_source" NOT NULL,
-    "idempotencyKey" TEXT NOT NULL,
     "externalId" TEXT,
     "integrationClientId" TEXT,
     "approvedById" TEXT,
@@ -153,6 +142,7 @@ CREATE TABLE "submission_entry" (
     "classCode" TEXT NOT NULL,
     "shootingClassId" TEXT,
     "score" INTEGER,
+    "scoreId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -165,11 +155,7 @@ CREATE TABLE "score" (
     "personId" TEXT NOT NULL,
     "shootingClassId" TEXT NOT NULL,
     "competitionId" TEXT NOT NULL,
-    "submissionEntryId" TEXT,
     "score" INTEGER NOT NULL,
-    "band" "award_band",
-    "thresholdScheduleId" TEXT,
-    "approvedById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "score_pkey" PRIMARY KEY ("id")
@@ -195,26 +181,11 @@ CREATE TABLE "record_standing" (
     "score" INTEGER NOT NULL,
     "scoreId" TEXT,
     "effectiveOn" DATE,
+    "recognisedOn" DATE,
     "label" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "record_standing_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "threshold_schedule" (
-    "id" TEXT NOT NULL,
-    "roundId" TEXT NOT NULL,
-    "shootingClassId" TEXT NOT NULL,
-    "recordStandingId" TEXT NOT NULL,
-    "effectiveOn" DATE,
-    "starCutoff" DECIMAL(12,4) NOT NULL,
-    "goldCutoff" DECIMAL(12,4) NOT NULL,
-    "silverCutoff" DECIMAL(12,4) NOT NULL,
-    "bronzeCutoff" DECIMAL(12,4) NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "threshold_schedule_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -226,38 +197,9 @@ CREATE TABLE "gain_award" (
     "level" "award_level" NOT NULL,
     "source" "award_source" NOT NULL,
     "issuedOn" DATE,
-    "achievementId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "gain_award_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "changelog_day" (
-    "id" TEXT NOT NULL,
-    "recognisedOn" DATE NOT NULL,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "changelog_day_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "achievement" (
-    "id" TEXT NOT NULL,
-    "changelogDayId" TEXT NOT NULL,
-    "kind" "achievement_kind" NOT NULL,
-    "recognisedOn" DATE NOT NULL,
-    "personId" TEXT NOT NULL,
-    "shootingClassId" TEXT,
-    "awardTrackId" TEXT,
-    "roundId" TEXT,
-    "level" "award_level",
-    "scoreId" TEXT,
-    "recordStandingId" TEXT,
-    "detailScore" INTEGER,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "achievement_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -306,13 +248,7 @@ CREATE UNIQUE INDEX "round_code_key" ON "round"("code");
 CREATE UNIQUE INDEX "integration_client_certificateFingerprint_key" ON "integration_client"("certificateFingerprint");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "competition_integrationClientId_externalId_key" ON "competition"("integrationClientId", "externalId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "score_submission_competitionId_key" ON "score_submission"("competitionId");
-
--- CreateIndex
-CREATE UNIQUE INDEX "score_submission_idempotencyKey_key" ON "score_submission"("idempotencyKey");
 
 -- CreateIndex
 CREATE INDEX "score_submission_status_idx" ON "score_submission"("status");
@@ -324,7 +260,7 @@ CREATE UNIQUE INDEX "score_submission_integrationClientId_externalId_key" ON "sc
 CREATE INDEX "submission_entry_submissionId_idx" ON "submission_entry"("submissionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "score_submissionEntryId_key" ON "score"("submissionEntryId");
+CREATE UNIQUE INDEX "submission_entry_scoreId_key" ON "submission_entry"("scoreId");
 
 -- CreateIndex
 CREATE INDEX "score_personId_shootingClassId_idx" ON "score"("personId", "shootingClassId");
@@ -345,25 +281,7 @@ CREATE UNIQUE INDEX "record_standing_scoreId_key" ON "record_standing"("scoreId"
 CREATE INDEX "record_standing_roundId_shootingClassId_score_idx" ON "record_standing"("roundId", "shootingClassId", "score");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "threshold_schedule_recordStandingId_key" ON "threshold_schedule"("recordStandingId");
-
--- CreateIndex
-CREATE INDEX "threshold_schedule_roundId_shootingClassId_effectiveOn_idx" ON "threshold_schedule"("roundId", "shootingClassId", "effectiveOn");
-
--- CreateIndex
-CREATE UNIQUE INDEX "gain_award_achievementId_key" ON "gain_award"("achievementId");
-
--- CreateIndex
 CREATE UNIQUE INDEX "gain_award_personId_shootingClassId_awardTrackId_level_key" ON "gain_award"("personId", "shootingClassId", "awardTrackId", "level");
-
--- CreateIndex
-CREATE UNIQUE INDEX "changelog_day_recognisedOn_key" ON "changelog_day"("recognisedOn");
-
--- CreateIndex
-CREATE INDEX "achievement_recognisedOn_idx" ON "achievement"("recognisedOn");
-
--- CreateIndex
-CREATE INDEX "achievement_changelogDayId_idx" ON "achievement"("changelogDayId");
 
 -- CreateIndex
 CREATE INDEX "membership_claim_userId_status_idx" ON "membership_claim"("userId", "status");
@@ -390,9 +308,6 @@ ALTER TABLE "round" ADD CONSTRAINT "round_awardTrackId_fkey" FOREIGN KEY ("award
 ALTER TABLE "integration_client" ADD CONSTRAINT "integration_client_issuedById_fkey" FOREIGN KEY ("issuedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "competition" ADD CONSTRAINT "competition_integrationClientId_fkey" FOREIGN KEY ("integrationClientId") REFERENCES "integration_client"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "competition" ADD CONSTRAINT "competition_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -414,6 +329,9 @@ ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_submissionId_fke
 ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -421,15 +339,6 @@ ALTER TABLE "score" ADD CONSTRAINT "score_shootingClassId_fkey" FOREIGN KEY ("sh
 
 -- AddForeignKey
 ALTER TABLE "score" ADD CONSTRAINT "score_competitionId_fkey" FOREIGN KEY ("competitionId") REFERENCES "competition"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "score" ADD CONSTRAINT "score_submissionEntryId_fkey" FOREIGN KEY ("submissionEntryId") REFERENCES "submission_entry"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "score" ADD CONSTRAINT "score_thresholdScheduleId_fkey" FOREIGN KEY ("thresholdScheduleId") REFERENCES "threshold_schedule"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "score" ADD CONSTRAINT "score_approvedById_fkey" FOREIGN KEY ("approvedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "score_void" ADD CONSTRAINT "score_void_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -453,15 +362,6 @@ ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_personId_fkey" FOR
 ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "threshold_schedule" ADD CONSTRAINT "threshold_schedule_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "threshold_schedule" ADD CONSTRAINT "threshold_schedule_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "threshold_schedule" ADD CONSTRAINT "threshold_schedule_recordStandingId_fkey" FOREIGN KEY ("recordStandingId") REFERENCES "record_standing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -469,30 +369,6 @@ ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_shootingClassId_fkey" FOREIG
 
 -- AddForeignKey
 ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_awardTrackId_fkey" FOREIGN KEY ("awardTrackId") REFERENCES "award_track"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_achievementId_fkey" FOREIGN KEY ("achievementId") REFERENCES "achievement"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_changelogDayId_fkey" FOREIGN KEY ("changelogDayId") REFERENCES "changelog_day"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_awardTrackId_fkey" FOREIGN KEY ("awardTrackId") REFERENCES "award_track"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "achievement" ADD CONSTRAINT "achievement_recordStandingId_fkey" FOREIGN KEY ("recordStandingId") REFERENCES "record_standing"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership_claim" ADD CONSTRAINT "membership_claim_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -513,13 +389,6 @@ ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_score_nonnegative"
 ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_score_nonnegative" CHECK ("score" IS NULL OR "score" >= 0);
 
 ALTER TABLE "score_void" ADD CONSTRAINT "score_void_distinct_scores" CHECK ("scoreId" <> "replacementScoreId");
-
-ALTER TABLE "threshold_schedule" ADD CONSTRAINT "threshold_schedule_bands_descend" CHECK (
-    "starCutoff" >= "goldCutoff"
-    AND "goldCutoff" >= "silverCutoff"
-    AND "silverCutoff" >= "bronzeCutoff"
-    AND "bronzeCutoff" >= 0
-);
 
 ALTER TABLE "score_submission" ADD CONSTRAINT "score_submission_status_shape" CHECK (
     (

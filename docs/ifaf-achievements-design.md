@@ -50,14 +50,11 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | Person, PersonName | Membership number is unique per person after rectification. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import, identity corrections, and a secretary name change |
 | BowStyle, AgeDivision, ShootingClass | 12 styles, 12 divisions, 144 codes. Longest age prefix wins (`YAM` before `AM`) | Seed |
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
-| Competition | One round of archers at one range. Name, date or label, round, and external id. A second day or a second round type is another competition | Import and API |
-| ScoreSubmission | One competition’s entries, still pending. Idempotency key. The secretary modifies the whole submission, then approves it as a whole | Secretary and API |
-| Score | Approved fact for one person in one class at one competition: the integer, the band, and a void pointer for an amendment. The round, the date, and the record used for that band come from the competition and the standing in force that day | Approval of the submission, or a later amendment |
-| RecordStanding | Best score for one round type, bow style, and age division. A strictly higher approved score replaces it | Import, then approval |
-| ThresholdSchedule | Effective-dated Star, Gold, Silver, Bronze | Engine, when a record changes |
+| Competition | One round of archers at one range. Name, date, and round. A second day or a second round type is another competition. An undated meet keeps the name, such as `EBHC 2026`, and has no date | Import and API |
+| ScoreSubmission | One competition’s entries, still pending. The external id belongs here, so a replay returns this submission | Secretary and API |
+| Score | The approved integer for one person in one class at one competition. The round and the date come from the competition. The band is calculated from the standing record in force that day | Approval of the submission, or a later amendment |
+| RecordStanding | The record score for one round, bow style, and age division, the day it takes effect, and the day it became official. A strictly higher approved score replaces it | Import, then approval |
 | GainAward | One pin of each level per person, class, and track, with the date it was issued. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
-| Achievement | A new pin or a record change. `recognisedOn` is when it became official | Approval, or a later amendment |
-| Changelog entry | The GAINS pins and record changes that became official on one date. Generated when the secretary approves a submission or amends an entry | Approval or amendment |
 | Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
 | MembershipClaim | A request to attach a sign-in account to a membership number | Archer, then an account with `claims.approve` |
 | IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | Account with `integrations.manage` |
@@ -111,7 +108,7 @@ These sentences are in the GAINS Info sheet.
 - STAR is two scores at 90% or better, and only after HOTSHOT. Until that pin can be handed out, those scores qualify as Gold. They count toward the one Gold pin and toward the eight scores for Hotshot.
 - Scores carry across the calendar year inside a class and track. A class change starts a new career.
 - A score is classified once, against the record for that round type on the date it was shot. A later record does not change that band. The band is spent on the round’s track: Indoor, Animal, or Field.
-- A new record inserts a new `ThresholdSchedule` effective that day. It applies only to scores shot on or after that date.
+- A new record takes effect on the day it was shot. Its cutoffs are 90, 80, 70, and 50 percent of that score, and they apply only to scores shot on or after that day.
 - A tie does not beat a record. An equal score is kept and can still classify for GAINS, and the holder and the cutoffs stay as they are.
 
 ## Who uses it
@@ -131,7 +128,7 @@ Every public filter is a query string, so a support reply is a link. Public page
 
 ## Public changelog
 
-`/changelog` is a running public page. Approving a submission adds that day’s GAINS pins and record changes to it. Several submissions on the same day fold into one entry. An amendment appears on the day it was made. The PRO sends people the link for the day, `/changelog/2026-11-14`.
+`/changelog` lists those days from the pins’ issue dates and the records’ official dates. It does not keep a separate copy of each pin or record.
 
 `/changelog` lists the days, newest first. A day has two groups:
 
@@ -161,7 +158,7 @@ Environment names are `IFAF_AT_POSTGRES_PRISMA_URL` (pooled, runtime), `IFAF_AT_
 2. The secretary modifies the submission as a whole: the competition’s name, date, and round, and any entry’s membership number, class, or score. Entries can be added or removed. A second day or a second round type is another competition, such as `EBHC 2026 - day 1`. Nothing is public yet.
 3. Review calculates discrepancies beside the entries from the submission as it stands and the official book as it stands. The same inputs produce the same suggestions. A discrepancy is a suggestion, not an error, and it is not stored. People change name, club, bow, age division, and the number they are entered under, so the secretary can approve with the suggestions still showing. The suggestions are:
    - The name matches a person who already has a different membership number.
-   - The membership number matches a person whose current name or club is different.
+   - The membership number matches a person whose current name is different, or whose latest entry names a different club.
    - The membership number matches a person whose recent scores use a different bow style, age division, or gender.
 4. The secretary approves the submission. Approval is refused while the competition names an unknown round, or an entry is incomplete or names an unknown class. Open discrepancies do not refuse it. Approving writes a score for every entry. Each score is classified against the record for the competition’s round on the competition’s date.
 5. A score strictly higher than the record for that round type and class becomes the record, and the previous row is kept. An equal or lower score is kept and the record stays.
@@ -240,7 +237,7 @@ Idempotent seed for 12 styles, 12 divisions, 144 classes, 12 rounds, and the thr
 
 ### 5. Import the workbooks
 
-`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. Keep the competition label and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. Do not compute awards. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `IRE_17010` Dempsey David move to `IRE_17011`; Una Dempsey keeps `IRE_17010`. Done when a fresh import matches those counts, David’s SBG scores are on `IRE_17011`, Una’s scores remain on `IRE_17010`, and a second run does not duplicate scores.
+`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. Do not compute awards. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `IRE_17010` Dempsey David move to `IRE_17011`; Una Dempsey keeps `IRE_17010`. Done when a fresh import matches those counts, David’s SBG scores are on `IRE_17011`, Una’s scores remain on `IRE_17010`, and a second run does not duplicate scores.
 
 ### 6. GAINS engine
 
