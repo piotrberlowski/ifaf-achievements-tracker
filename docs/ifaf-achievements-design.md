@@ -106,7 +106,7 @@ The first nine bow styles line up in both workbooks. Longbow, Historical Bow, an
 These sentences are in the GAINS Info sheet.
 
 - A pin needs two scores in the same band. One qualifying score stays unpaired and is shown as progress.
-- Bands are 90, 80, 70, and 50 percent of the IFAF record. An integer score clears a cutoff when it is greater than or equal. 186 clears 185.4. A higher percentage also clears every lower cutoff: 90% meets Star, Gold, Silver, and Bronze.
+- Bands are 90, 80, 70, and 50 percent of the IFAF record. An integer score clears a cutoff when it is greater than or equal. 186 clears 185.4. Bronze and Silver are strict bands: a score takes the highest band it clears, and a Gold score is not a Silver or Bronze score.
 - HOTSHOT is eight scores that classify as Gold on that track.
 - Each pin is handed out once per shooting class and track. A Gold already handed out is not handed out again in that category. The same applies to Bronze, Silver, Hotshot, and Star.
 - STAR is two scores at 90% or better, and only after HOTSHOT. Until that pin can be handed out, those scores qualify as Gold. They count toward the one Gold pin and toward the eight scores for Hotshot.
