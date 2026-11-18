@@ -52,7 +52,6 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
 | Competition | Name, date or label, external id from arc-comp | Import and API |
 | ScoreSubmission | One competition’s entries, still pending. Idempotency key. The secretary modifies the whole submission, then approves it as a whole | Secretary and API |
-| Discrepancy | A suggestion on an entry: same person with another number, or the same number with a different name, club, bow style, age, or gender than usual. It does not block approval | Computed when the submission is saved |
 | Score | Approved fact, band snapshot, void pointer for an amendment | Approval of the submission, or a later amendment |
 | RecordStanding | Best score for one round type, bow style, and age division. A strictly higher approved score replaces it | Import, then approval |
 | ThresholdSchedule | Effective-dated Star, Gold, Silver, Bronze | Engine, when a record changes |
@@ -160,14 +159,14 @@ Environment names are `IFAF_AT_POSTGRES_PRISMA_URL` (pooled, runtime), `IFAF_AT_
 
 1. A competition app posts one tournament as JSON, or the secretary uploads one result file. Either way it becomes one pending submission. Public pages are unchanged.
 2. The secretary modifies the submission as a whole: competition details, and any entry’s membership number, class, round type, score, or date. Entries can be added or removed. Nothing is public yet.
-3. The submission lists discrepancies beside the entries. A discrepancy is a suggestion, not an error. People change name, club, bow, age division, and the number they are entered under, so the secretary can approve with the suggestions still showing. The suggestions are:
+3. Review calculates discrepancies beside the entries from the submission as it stands and the official book as it stands. The same inputs produce the same suggestions. A discrepancy is a suggestion, not an error, and it is not stored. People change name, club, bow, age division, and the number they are entered under, so the secretary can approve with the suggestions still showing. The suggestions are:
    - The name matches a person who already has a different membership number.
    - The membership number matches a person whose current name or club is different.
    - The membership number matches a person whose recent scores use a different bow style, age division, or gender.
 4. The secretary approves the submission. Approval is refused while any entry is incomplete or names an unknown class or round. Open discrepancies do not refuse it. Approving writes a score for every entry. Each score is classified against the record for its round type on `shotOn`.
 5. A score strictly higher than the record for that round type and class becomes the record, and the previous row is kept. An equal or lower score is kept and the record stays.
 6. The engine reruns for each affected person, class, and track. New pins and records append achievement rows.
-7. After approval, the secretary can amend an entry. The amendment voids that score, writes the replacement, and reruns the record and the awards for the people affected. The rest of the submission stays approved. An amendment shows the same suggestions and does not require them to be cleared.
+7. After approval, the secretary can amend an entry. The amendment voids that score, writes the replacement, and reruns the record and the awards for the people affected. The rest of the submission stays approved. An amendment shows the suggestions calculated from the entry and the official book at that moment, and it does not require them to be cleared.
 ### How a tournament gets in
 
 All three intakes become the same pending submission. An unknown class or round stays on that submission for the secretary to correct. Nothing is published until the secretary approves the whole submission. Sending the same tournament again, with the same external id, returns the original submission.
