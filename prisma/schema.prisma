@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -50,11 +51,11 @@ enum AwardLevel {
   @@map("award_level")
 }
 
-enum AwardSource {
-  tracker
-  engine
+enum PinStatus {
+  pending
+  issued
 
-  @@map("award_source")
+  @@map("pin_status")
 }
 
 model User {
@@ -141,9 +142,11 @@ model Verification {
   @@map("verification")
 }
 
-// Score, ScoreVoid, and RecordStanding reject updates and deletes.
+// Score and ScoreVoid reject updates and deletes.
 // A ScoreSubmission can be edited while it is pending. After approval or
 // rejection the row stays. An amendment writes a ScoreVoid and a new Score.
+// record_standing is a view over the scores and is refreshed after each
+// score is written or voided. Pins are stored with status pending or issued.
 
 model Person {
   id               String            @id @default(cuid())
@@ -153,7 +156,6 @@ model Person {
   names            PersonName[]
   claims           MembershipClaim[]
   scores           Score[]
-  records          RecordStanding[]
   awards           GainAward[]
 
   @@map("person")
@@ -203,7 +205,6 @@ model ShootingClass {
   ageDivision   AgeDivision       @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
   entries       SubmissionEntry[]
   scores        Score[]
-  records       RecordStanding[]
   awards        GainAward[]
 
   @@unique([bowStyleId, ageDivisionId])
@@ -221,14 +222,13 @@ model AwardTrack {
 }
 
 model Round {
-  id           String           @id @default(cuid())
-  code         String           @unique
+  id           String        @id @default(cuid())
+  code         String        @unique
   name         String
   awardTrackId String
-  displayOnly  Boolean          @default(false)
-  awardTrack   AwardTrack       @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
+  displayOnly  Boolean       @default(false)
+  awardTrack   AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
   competitions Competition[]
-  records      RecordStanding[]
 
   @@map("round")
 }
@@ -248,16 +248,17 @@ model IntegrationClient {
 }
 
 model Competition {
-  id         String           @id @default(cuid())
-  name       String
-  startsOn   DateTime?        @db.Date
-  roundCode  String
-  roundId    String?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  round      Round?           @relation(fields: [roundId], references: [id], onDelete: Restrict)
-  submission ScoreSubmission?
-  scores     Score[]
+  id             String           @id @default(cuid())
+  name           String
+  startsOn       DateTime?        @db.Date
+  roundCode      String
+  roundId        String?
+  countsForGains Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  round          Round?           @relation(fields: [roundId], references: [id], onDelete: Restrict)
+  submission     ScoreSubmission?
+  scores         Score[]
 
   @@map("competition")
 }
@@ -319,7 +320,6 @@ model Score {
   entry           SubmissionEntry?
   voidance        ScoreVoid?       @relation("VoidedScore")
   replacementFor  ScoreVoid?       @relation("ReplacementScore")
-  record          RecordStanding?
 
   @@index([personId, shootingClassId])
   @@index([competitionId])
@@ -339,23 +339,16 @@ model ScoreVoid {
   @@map("score_void")
 }
 
-model RecordStanding {
-  id              String        @id @default(cuid())
+view RecordStanding {
+  scoreId         String
   roundId         String
   shootingClassId String
   personId        String
   score           Int
-  scoreId         String?       @unique
-  effectiveOn     DateTime?     @db.Date
-  recognisedOn    DateTime?     @db.Date
-  label           String?
-  createdAt       DateTime      @default(now())
-  round           Round         @relation(fields: [roundId], references: [id], onDelete: Restrict)
-  shootingClass   ShootingClass @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
-  person          Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
-  sourceScore     Score?        @relation(fields: [scoreId], references: [id], onDelete: Restrict)
+  effectiveOn     DateTime? @db.Date
+  recognisedOn    DateTime? @db.Date
 
-  @@index([roundId, shootingClassId, score])
+  @@unique([scoreId])
   @@map("record_standing")
 }
 
@@ -365,7 +358,7 @@ model GainAward {
   shootingClassId String
   awardTrackId    String
   level           AwardLevel
-  source          AwardSource
+  status          PinStatus     @default(pending)
   issuedOn        DateTime?     @db.Date
   createdAt       DateTime      @default(now())
   person          Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
