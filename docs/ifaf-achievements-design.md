@@ -52,7 +52,7 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
 | Competition | One round of archers at one range. Name, date or label, round, and external id. A second day or a second round type is another competition | Import and API |
 | ScoreSubmission | One competition’s entries, still pending. Idempotency key. The secretary modifies the whole submission, then approves it as a whole | Secretary and API |
-| Score | Approved fact for one person in one class at one competition: the integer, the band snapshot, and a void pointer for an amendment. The round and the date come from the competition | Approval of the submission, or a later amendment |
+| Score | Approved fact for one person in one class at one competition: the integer, the band, and a void pointer for an amendment. The round, the date, and the record used for that band come from the competition and the standing in force that day | Approval of the submission, or a later amendment |
 | RecordStanding | Best score for one round type, bow style, and age division. A strictly higher approved score replaces it | Import, then approval |
 | ThresholdSchedule | Effective-dated Star, Gold, Silver, Bronze | Engine, when a record changes |
 | GainAward | One pin of each level per person, class, and track, with the date it was issued. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
