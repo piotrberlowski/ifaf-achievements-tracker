@@ -14,7 +14,7 @@ CREATE TYPE "claim_status" AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE "award_level" AS ENUM ('bronze', 'silver', 'gold', 'hotshot', 'star');
 
 -- CreateEnum
-CREATE TYPE "award_source" AS ENUM ('tracker', 'engine');
+CREATE TYPE "pin_status" AS ENUM ('pending', 'issued');
 
 -- CreateTable
 CREATE TABLE "person" (
@@ -108,6 +108,7 @@ CREATE TABLE "competition" (
     "startsOn" DATE,
     "roundCode" TEXT NOT NULL,
     "roundId" TEXT,
+    "countsForGains" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -173,29 +174,13 @@ CREATE TABLE "score_void" (
 );
 
 -- CreateTable
-CREATE TABLE "record_standing" (
-    "id" TEXT NOT NULL,
-    "roundId" TEXT NOT NULL,
-    "shootingClassId" TEXT NOT NULL,
-    "personId" TEXT NOT NULL,
-    "score" INTEGER NOT NULL,
-    "scoreId" TEXT,
-    "effectiveOn" DATE,
-    "recognisedOn" DATE,
-    "label" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "record_standing_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "gain_award" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
     "shootingClassId" TEXT NOT NULL,
     "awardTrackId" TEXT NOT NULL,
     "level" "award_level" NOT NULL,
-    "source" "award_source" NOT NULL,
+    "status" "pin_status" NOT NULL DEFAULT 'pending',
     "issuedOn" DATE,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -275,12 +260,6 @@ CREATE UNIQUE INDEX "score_void_scoreId_key" ON "score_void"("scoreId");
 CREATE UNIQUE INDEX "score_void_replacementScoreId_key" ON "score_void"("replacementScoreId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "record_standing_scoreId_key" ON "record_standing"("scoreId");
-
--- CreateIndex
-CREATE INDEX "record_standing_roundId_shootingClassId_score_idx" ON "record_standing"("roundId", "shootingClassId", "score");
-
--- CreateIndex
 CREATE UNIQUE INDEX "gain_award_personId_shootingClassId_awardTrackId_level_key" ON "gain_award"("personId", "shootingClassId", "awardTrackId", "level");
 
 -- CreateIndex
@@ -350,18 +329,6 @@ ALTER TABLE "score_void" ADD CONSTRAINT "score_void_replacementScoreId_fkey" FOR
 ALTER TABLE "score_void" ADD CONSTRAINT "score_void_voidedById_fkey" FOREIGN KEY ("voidedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_roundId_fkey" FOREIGN KEY ("roundId") REFERENCES "round"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_scoreId_fkey" FOREIGN KEY ("scoreId") REFERENCES "score"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -379,12 +346,11 @@ ALTER TABLE "membership_claim" ADD CONSTRAINT "membership_claim_personId_fkey" F
 -- AddForeignKey
 ALTER TABLE "membership_claim" ADD CONSTRAINT "membership_claim_reviewedById_fkey" FOREIGN KEY ("reviewedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- Scores, voids, and record standings are insert-only. A submission can be
--- edited while it is pending. Approving or rejecting it is the last change.
+-- Scores and voids are insert-only. A submission can be edited while it is
+-- pending. Approving or rejecting it is the last change. Standing records
+-- and standing awards are views over the scores.
 
 ALTER TABLE "score" ADD CONSTRAINT "score_value_nonnegative" CHECK ("score" >= 0);
-
-ALTER TABLE "record_standing" ADD CONSTRAINT "record_standing_score_nonnegative" CHECK ("score" >= 0);
 
 ALTER TABLE "submission_entry" ADD CONSTRAINT "submission_entry_score_nonnegative" CHECK ("score" IS NULL OR "score" >= 0);
 
@@ -429,10 +395,6 @@ CREATE TRIGGER score_append_only
 
 CREATE TRIGGER score_void_append_only
   BEFORE UPDATE OR DELETE ON "score_void"
-  FOR EACH ROW EXECUTE FUNCTION domain_reject_change();
-
-CREATE TRIGGER record_standing_append_only
-  BEFORE UPDATE OR DELETE ON "record_standing"
   FOR EACH ROW EXECUTE FUNCTION domain_reject_change();
 
 CREATE FUNCTION score_submission_guard() RETURNS trigger
@@ -509,3 +471,72 @@ $$;
 CREATE TRIGGER competition_follows_submission
   BEFORE UPDATE OR DELETE ON "competition"
   FOR EACH ROW EXECUTE FUNCTION competition_guard();
+
+-- A score sets the record when no earlier score in that round and class
+-- is higher or equal. A tie leaves the earlier holder in place.
+-- Refreshed after a score is written or voided.
+CREATE MATERIALIZED VIEW "record_standing" AS
+SELECT
+    s.id AS "scoreId",
+    c."roundId" AS "roundId",
+    s."shootingClassId" AS "shootingClassId",
+    s."personId" AS "personId",
+    s.score AS score,
+    c."startsOn" AS "effectiveOn",
+    s."createdAt"::date AS "recognisedOn"
+FROM "score" s
+JOIN "competition" c ON c.id = s."competitionId"
+LEFT JOIN "score_void" voided ON voided."scoreId" = s.id
+WHERE voided.id IS NULL
+    AND c."roundId" IS NOT NULL
+    AND NOT EXISTS (
+        SELECT 1
+        FROM "score" earlier
+        JOIN "competition" earlier_competition
+            ON earlier_competition.id = earlier."competitionId"
+        LEFT JOIN "score_void" earlier_void
+            ON earlier_void."scoreId" = earlier.id
+        WHERE earlier_void.id IS NULL
+            AND earlier.id <> s.id
+            AND earlier."shootingClassId" = s."shootingClassId"
+            AND earlier_competition."roundId" = c."roundId"
+            AND earlier.score >= s.score
+            AND (
+                earlier_competition."startsOn" < c."startsOn"
+                OR (
+                    earlier_competition."startsOn" IS NOT DISTINCT FROM c."startsOn"
+                    AND (
+                        earlier."createdAt" < s."createdAt"
+                        OR (
+                            earlier."createdAt" = s."createdAt"
+                            AND earlier.id < s.id
+                        )
+                    )
+                )
+                OR (
+                    earlier_competition."startsOn" IS NOT NULL
+                    AND c."startsOn" IS NULL
+                )
+            )
+    );
+
+CREATE UNIQUE INDEX "record_standing_scoreId_key" ON "record_standing" ("scoreId");
+
+CREATE FUNCTION refresh_record_standing() RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  REFRESH MATERIALIZED VIEW "record_standing";
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER score_refresh_record_standing
+  AFTER INSERT ON "score"
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION refresh_record_standing();
+
+CREATE TRIGGER score_void_refresh_record_standing
+  AFTER INSERT ON "score_void"
+  FOR EACH STATEMENT
+  EXECUTE FUNCTION refresh_record_standing();

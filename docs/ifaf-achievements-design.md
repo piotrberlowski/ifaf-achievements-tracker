@@ -50,16 +50,16 @@ The award key is **person + shooting class + award track**. A shooting class is 
 | Person, PersonName | Membership number is unique per person after rectification. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import, identity corrections, and a secretary name change |
 | BowStyle, AgeDivision, ShootingClass | 12 styles, 12 divisions, 144 codes. Longest age prefix wins (`YAM` before `AM`) | Seed |
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
-| Competition | One round of archers at one range. Name, date, and round. A second day or a second round type is another competition. An undated meet keeps the name, such as `EBHC 2026`, and has no date | Import and API |
+| Competition | One round of archers at one range. Name, date, and round. A second day or a second round type is another competition. An undated meet keeps the name, such as `EBHC 2026`, and has no date. `countsForGains` is false for a record-only event | Import and API |
 | ScoreSubmission | One competition’s entries, still pending. The external id belongs here, so a replay returns this submission | Secretary and API |
-| Score | The approved integer for one person in one class at one competition. The round and the date come from the competition. The band is calculated from the standing record in force that day | Approval of the submission, or a later amendment |
-| RecordStanding | The record score for one round, bow style, and age division, the day it takes effect, and the day it became official. A strictly higher approved score replaces it | Import, then approval |
-| GainAward | One pin of each level per person, class, and track, with the date it was issued. A level already handed out is not issued again | Engine, seeded from the secretary’s tracker |
+| Score | The approved integer for one person in one class at one competition. The round and the date come from the competition. The band is calculated from the record in force that day | Approval of the submission, or a later amendment |
+| Record standing | A view of the scores that set a record, refreshed after each score is written or voided. The standing record is the highest of those. An imported record is a competition with one score, even when the event was external and only one archer is known | Read from scores |
+| GAINS award | One pin per person, class, track, and level. `pending` until the pin is handed out, then `issued`, with the issue date when it is known | Engine, and the secretary’s tracker |
 | Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
 | MembershipClaim | A request to attach a sign-in account to a membership number | Archer, then an account with `claims.approve` |
 | IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | Account with `integrations.manage` |
 
-Scores and records are append-only. An amendment voids the original score and writes a replacement.
+Scores are append-only. An amendment voids the original score and writes a replacement. The standing record is a view over the scores. Pins are stored, each one pending or issued.
 
 ### Class codes
 
@@ -128,7 +128,7 @@ Every public filter is a query string, so a support reply is a link. Public page
 
 ## Public changelog
 
-`/changelog` lists those days from the pins’ issue dates and the records’ official dates. It does not keep a separate copy of each pin or record.
+`/changelog` lists the days from issued pins and from the record view. A pending pin stays off the page.
 
 `/changelog` lists the days, newest first. A day has two groups:
 
@@ -229,7 +229,7 @@ Create the Vercel project, attach Neon Free, and add `/api/health` that runs `SE
 
 ### 3. Domain schema
 
-One migration for the entities above. Do not run Better Auth’s generator a second time if it would overwrite the domain models. Done when the migration applies on a fresh database and score, submission, and record rows are append-only.
+One migration for the entities above. Do not run Better Auth’s generator a second time if it would overwrite the domain models. Done when the migration applies on a fresh database and score and submission rows are append-only.
 
 ### 4. Reference seed
 
@@ -237,11 +237,11 @@ Idempotent seed for 12 styles, 12 divisions, 144 classes, 12 rounds, and the thr
 
 ### 5. Import the workbooks
 
-`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. Do not compute awards. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `IRE_17010` Dempsey David move to `IRE_17011`; Una Dempsey keeps `IRE_17010`. Done when a fresh import matches those counts, David’s SBG scores are on `IRE_17011`, Una’s scores remain on `IRE_17010`, and a second run does not duplicate scores.
+`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. A standing record that is not already one of those scores becomes its own competition and one score, even when the event was external and only that archer is known. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. A record-only event has `countsForGains` false. Pins already handed out are stored as `issued`. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `IRE_17010` Dempsey David move to `IRE_17011`; Una Dempsey keeps `IRE_17010`. Done when a fresh import matches those counts, David’s SBG scores are on `IRE_17011`, Una’s scores remain on `IRE_17010`, and a second run does not duplicate scores.
 
 ### 6. GAINS engine
 
-`src/lib/gains/engine.ts` is pure and implements `docs/gains-rules.md`. The spreadsheet tracker is imported as pins already handed out, not as the engine’s expected output. Do not change a ratio to raise a pass rate. Done when a class with no record has no threshold, a later record does not rewrite a stored band, and a second Gold is not created in a class and track that already has one.
+`src/lib/gains/engine.ts` is pure and implements `docs/gains-rules.md`. It writes a `pending` pin when the scores earn one. The spreadsheet tracker is loaded as `issued` pins already handed out, not as the engine’s expected output. The standing record is the view. Do not change a ratio to raise a pass rate. Done when a class with no record has no threshold, a later record does not rewrite a stored band, and a second Gold is not created in a class and track that already has one.
 
 ### 7. Public pages
 
