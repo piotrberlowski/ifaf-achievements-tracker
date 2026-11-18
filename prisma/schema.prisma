@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -8,17 +9,73 @@ datasource db {
   directUrl = env("IFAF_AT_POSTGRES_URL_NON_POOLING")
 }
 
+enum DivisionGender {
+  male
+  female
+
+  @@map("division_gender")
+}
+
+enum SubmissionStatus {
+  pending
+  approved
+  rejected
+
+  @@map("submission_status")
+}
+
+enum SubmissionSource {
+  api
+  csv
+  xlsx
+  import
+
+  @@map("submission_source")
+}
+
+enum ClaimStatus {
+  pending
+  approved
+  rejected
+
+  @@map("claim_status")
+}
+
+enum AwardLevel {
+  bronze
+  silver
+  gold
+  hotshot
+  star
+
+  @@map("award_level")
+}
+
+enum PinStatus {
+  pending
+  issued
+
+  @@map("pin_status")
+}
+
 model User {
-  id            String    @id
-  name          String
-  email         String
-  emailVerified Boolean   @default(false)
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  sessions      Session[]
-  accounts      Account[]
-  permissions   PermissionGrant[]
+  id                  String              @id
+  name                String
+  email               String
+  emailVerified       Boolean             @default(false)
+  image               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  sessions            Session[]
+  accounts            Account[]
+  permissions         PermissionGrant[]
+  membershipClaims    MembershipClaim[]   @relation("Claimant")
+  claimsReviewed      MembershipClaim[]   @relation("ClaimReviewer")
+  namesApproved       PersonName[]        @relation("NameApprover")
+  submissionsApproved ScoreSubmission[]   @relation("SubmissionApprover")
+  submissionsRejected ScoreSubmission[]   @relation("SubmissionRejector")
+  scoreVoids          ScoreVoid[]         @relation("ScoreVoider")
+  integrationClients  IntegrationClient[] @relation("CredentialIssuer")
 
   @@unique([email])
   @@map("user")
@@ -83,4 +140,250 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// Score and ScoreVoid reject updates and deletes.
+// A ScoreSubmission can be edited while it is pending. After approval or
+// rejection the row stays. An amendment writes a ScoreVoid and a new Score.
+// record_standing is a view over the scores and is refreshed after each
+// score is written or voided. Pins are stored with status pending or issued.
+
+model Person {
+  id               String            @id @default(cuid())
+  membershipNumber String            @unique
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  names            PersonName[]
+  claims           MembershipClaim[]
+  scores           Score[]
+  awards           GainAward[]
+
+  @@map("person")
+}
+
+model PersonName {
+  id           String    @id @default(cuid())
+  personId     String
+  fullName     String
+  note         String?
+  approvedById String?
+  approvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  person       Person    @relation(fields: [personId], references: [id], onDelete: Restrict)
+  approvedBy   User?     @relation("NameApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+
+  @@index([personId, approvedAt])
+  @@index([fullName])
+  @@map("person_name")
+}
+
+model BowStyle {
+  id      String          @id @default(cuid())
+  code    String          @unique
+  name    String
+  classes ShootingClass[]
+
+  @@map("bow_style")
+}
+
+model AgeDivision {
+  id      String          @id @default(cuid())
+  code    String          @unique
+  name    String
+  gender  DivisionGender
+  classes ShootingClass[]
+
+  @@map("age_division")
+}
+
+model ShootingClass {
+  id            String            @id @default(cuid())
+  code          String            @unique
+  bowStyleId    String
+  ageDivisionId String
+  bowStyle      BowStyle          @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
+  ageDivision   AgeDivision       @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
+  entries       SubmissionEntry[]
+  scores        Score[]
+  awards        GainAward[]
+
+  @@unique([bowStyleId, ageDivisionId])
+  @@map("shooting_class")
+}
+
+model AwardTrack {
+  id     String      @id @default(cuid())
+  code   String      @unique
+  name   String
+  rounds Round[]
+  awards GainAward[]
+
+  @@map("award_track")
+}
+
+model Round {
+  id           String        @id @default(cuid())
+  code         String        @unique
+  name         String
+  awardTrackId String
+  displayOnly  Boolean       @default(false)
+  awardTrack   AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
+  competitions Competition[]
+
+  @@map("round")
+}
+
+model IntegrationClient {
+  id                     String            @id @default(cuid())
+  name                   String
+  certificateFingerprint String?           @unique
+  secretHash             String?
+  issuedById             String
+  createdAt              DateTime          @default(now())
+  revokedAt              DateTime?
+  issuedBy               User              @relation("CredentialIssuer", fields: [issuedById], references: [id], onDelete: Restrict)
+  submissions            ScoreSubmission[]
+
+  @@map("integration_client")
+}
+
+model Competition {
+  id             String           @id @default(cuid())
+  name           String
+  startsOn       DateTime?        @db.Date
+  roundCode      String
+  roundId        String?
+  countsForGains Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  round          Round?           @relation(fields: [roundId], references: [id], onDelete: Restrict)
+  submission     ScoreSubmission?
+  scores         Score[]
+
+  @@map("competition")
+}
+
+model ScoreSubmission {
+  id                  String             @id @default(cuid())
+  competitionId       String             @unique
+  status              SubmissionStatus   @default(pending)
+  source              SubmissionSource
+  externalId          String?
+  integrationClientId String?
+  approvedById        String?
+  approvedAt          DateTime?
+  rejectedById        String?
+  rejectedAt          DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  competition         Competition        @relation(fields: [competitionId], references: [id], onDelete: Restrict)
+  integrationClient   IntegrationClient? @relation(fields: [integrationClientId], references: [id], onDelete: Restrict)
+  approvedBy          User?              @relation("SubmissionApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  rejectedBy          User?              @relation("SubmissionRejector", fields: [rejectedById], references: [id], onDelete: Restrict)
+  entries             SubmissionEntry[]
+
+  @@unique([integrationClientId, externalId])
+  @@index([status])
+  @@map("score_submission")
+}
+
+model SubmissionEntry {
+  id               String          @id @default(cuid())
+  submissionId     String
+  membershipNumber String
+  archerName       String
+  club             String?
+  classCode        String
+  shootingClassId  String?
+  score            Int?
+  scoreId          String?         @unique
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  submission       ScoreSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  shootingClass    ShootingClass?  @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  approvedScore    Score?          @relation(fields: [scoreId], references: [id], onDelete: Restrict)
+
+  @@index([submissionId])
+  @@map("submission_entry")
+}
+
+model Score {
+  id              String           @id @default(cuid())
+  personId        String
+  shootingClassId String
+  competitionId   String
+  score           Int
+  createdAt       DateTime         @default(now())
+  person          Person           @relation(fields: [personId], references: [id], onDelete: Restrict)
+  shootingClass   ShootingClass    @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  competition     Competition      @relation(fields: [competitionId], references: [id], onDelete: Restrict)
+  entry           SubmissionEntry?
+  voidance        ScoreVoid?       @relation("VoidedScore")
+  replacementFor  ScoreVoid?       @relation("ReplacementScore")
+
+  @@index([personId, shootingClassId])
+  @@index([competitionId])
+  @@map("score")
+}
+
+model ScoreVoid {
+  id                 String   @id @default(cuid())
+  scoreId            String   @unique
+  replacementScoreId String   @unique
+  voidedAt           DateTime @default(now())
+  voidedById         String
+  score              Score    @relation("VoidedScore", fields: [scoreId], references: [id], onDelete: Restrict)
+  replacementScore   Score    @relation("ReplacementScore", fields: [replacementScoreId], references: [id], onDelete: Restrict)
+  voidedBy           User     @relation("ScoreVoider", fields: [voidedById], references: [id], onDelete: Restrict)
+
+  @@map("score_void")
+}
+
+view RecordStanding {
+  scoreId         String
+  roundId         String
+  shootingClassId String
+  personId        String
+  score           Int
+  effectiveOn     DateTime? @db.Date
+  recognisedOn    DateTime? @db.Date
+
+  @@unique([scoreId])
+  @@map("record_standing")
+}
+
+model GainAward {
+  id              String        @id @default(cuid())
+  personId        String
+  shootingClassId String
+  awardTrackId    String
+  level           AwardLevel
+  status          PinStatus     @default(pending)
+  issuedOn        DateTime?     @db.Date
+  createdAt       DateTime      @default(now())
+  person          Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
+  shootingClass   ShootingClass @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  awardTrack      AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
+
+  @@unique([personId, shootingClassId, awardTrackId, level])
+  @@map("gain_award")
+}
+
+model MembershipClaim {
+  id               String      @id @default(cuid())
+  userId           String
+  membershipNumber String
+  personId         String?
+  status           ClaimStatus @default(pending)
+  reviewedById     String?
+  reviewedAt       DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  user             User        @relation("Claimant", fields: [userId], references: [id], onDelete: Cascade)
+  person           Person?     @relation(fields: [personId], references: [id], onDelete: Restrict)
+  reviewedBy       User?       @relation("ClaimReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
+
+  @@index([userId, status])
+  @@index([membershipNumber])
+  @@map("membership_claim")
 }

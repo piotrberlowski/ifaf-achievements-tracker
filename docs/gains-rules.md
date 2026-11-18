@@ -14,7 +14,9 @@ The award key is one person, one shooting class, and one track. A Field Gold and
 
 ## Classification
 
-Bands are 90%, 80%, 70%, and 50% of the IFAF record for that round type, bow style, and age division. They are Star, Gold, Silver, and Bronze. An integer score clears a cutoff when it is greater than or equal to it. A higher percentage clears every lower cutoff, so a score at 90% meets Star, Gold, Silver, and Bronze.
+Bands are 90%, 80%, 70%, and 50% of the IFAF record for that round type, bow style, and age division. They are Star, Gold, Silver, and Bronze. An integer score clears a cutoff when it is greater than or equal to it.
+
+Bronze and Silver are strict bands. A score is classified into exactly one band: the highest cutoff it clears. A Gold score is not a Silver score and is not a Bronze score. It does not count toward a Silver or Bronze pin. The Star exception below is the only case where a higher band also counts as Gold.
 
 The score is classified once, against the record in force on the day it was shot. A record set later does not change that band.
 
