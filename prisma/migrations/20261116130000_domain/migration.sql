@@ -174,7 +174,7 @@ CREATE TABLE "score_void" (
 );
 
 -- CreateTable
-CREATE TABLE "gain_award" (
+CREATE TABLE "gains_award" (
     "id" TEXT NOT NULL,
     "personId" TEXT NOT NULL,
     "shootingClassId" TEXT NOT NULL,
@@ -184,7 +184,7 @@ CREATE TABLE "gain_award" (
     "issuedOn" DATE,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "gain_award_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "gains_award_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -260,7 +260,7 @@ CREATE UNIQUE INDEX "score_void_scoreId_key" ON "score_void"("scoreId");
 CREATE UNIQUE INDEX "score_void_replacementScoreId_key" ON "score_void"("replacementScoreId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "gain_award_personId_shootingClassId_awardTrackId_level_key" ON "gain_award"("personId", "shootingClassId", "awardTrackId", "level");
+CREATE UNIQUE INDEX "gains_award_personId_shootingClassId_awardTrackId_level_key" ON "gains_award"("personId", "shootingClassId", "awardTrackId", "level");
 
 -- CreateIndex
 CREATE INDEX "membership_claim_userId_status_idx" ON "membership_claim"("userId", "status");
@@ -329,13 +329,13 @@ ALTER TABLE "score_void" ADD CONSTRAINT "score_void_replacementScoreId_fkey" FOR
 ALTER TABLE "score_void" ADD CONSTRAINT "score_void_voidedById_fkey" FOREIGN KEY ("voidedById") REFERENCES "user"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "gains_award" ADD CONSTRAINT "gains_award_personId_fkey" FOREIGN KEY ("personId") REFERENCES "person"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "gains_award" ADD CONSTRAINT "gains_award_shootingClassId_fkey" FOREIGN KEY ("shootingClassId") REFERENCES "shooting_class"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "gain_award" ADD CONSTRAINT "gain_award_awardTrackId_fkey" FOREIGN KEY ("awardTrackId") REFERENCES "award_track"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "gains_award" ADD CONSTRAINT "gains_award_awardTrackId_fkey" FOREIGN KEY ("awardTrackId") REFERENCES "award_track"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "membership_claim" ADD CONSTRAINT "membership_claim_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
