@@ -19,9 +19,9 @@ Vercel Hobby is for personal, non-commercial use. An official federation site ma
 | Numeric GAINS scores | 7,746 |
 | Membership numbers | 608 |
 | Standing records | 853 |
-| Class codes | 144 (12 bow styles by 12 age divisions) |
+| Class codes | 144 (12 bow styles by 6 age divisions by 2 genders) |
 
-GAINS is a score ledger: archers down the side, competitions across the top, dated 2022–2026. Records are the current holder, score, and date for one round, bow style, and age division. Earlier holders are not in the file. Star, Gold, Silver, and Bronze are 90%, 80%, 70%, and 50% of the standing record.
+GAINS is a score ledger: archers down the side, competitions across the top, dated 2022–2026. Records are the current holder, score, and date for one round, bow style, age division, and gender. Earlier holders are not in the file. Star, Gold, Silver, and Bronze are 90%, 80%, 70%, and 50% of the standing record.
 
 | Family | Numeric scores | Standing records |
 | --- | --- | --- |
@@ -43,18 +43,19 @@ Expert and International have records and cutoffs, and no GAINS score cells in t
 
 ## Domain
 
-The award key is **person + shooting class + award track**. A shooting class is one age division plus one bow style (`AFFS-R`, `AMFU`). There are three award tracks: Indoor, Animal, and Field. A score is banded against the record for its own round, then the band is spent inside that track. A Field Gold and a Hunter Gold are one Gold pin on the Field track.
+The award key is **person + age division + gender + bow style + award track**. A written class code combines those three parts (`AFFS-R`, `AMFU`). There are three award tracks: Indoor, Animal, and Field. A score is banded against the record for its own round, then the band is spent inside that track. A Field Gold and a Hunter Gold are one Gold pin on the Field track.
 
 | Entity | Holds | Written by |
 | --- | --- | --- |
 | Person, PersonName | Membership number is unique per person after rectification. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import, identity corrections, and a secretary name change |
-| BowStyle, AgeDivision, ShootingClass | 12 styles, 12 divisions, 144 codes. Longest age prefix wins (`YAM` before `AM`) | Seed |
+| BowStyle | 12 styles | Seed |
+| AgeDivision | Cub, Junior, Young Adult, Adult, Veteran, Senior. The written prefix is this code plus `M` or `F`, and the longest age code wins (`YA` before `A`) | Seed |
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
 | Competition | One round of archers at one range. Name, date, and round. A second day or a second round type is another competition. An undated meet keeps the name, such as `EBHC 2026`, and has no date. `countsForGains` is false for a record-only event | Import and API |
 | ScoreSubmission | One competition’s entries, still pending. The external id belongs here, so a replay returns this submission | Secretary and API |
-| Score | The approved integer for one person in one class at one competition. The round and the date come from the competition. The band is calculated from the record in force that day | Approval of the submission, or a later amendment |
-| Record standing | A view of the scores that set a record, refreshed after each score is written or voided. The standing record is the highest of those. An imported record is a competition with one score, even when the event was external and only one archer is known | Read from scores |
-| GAINS award | One pin per person, class, track, and level. `pending` until the pin is handed out, then `issued`, with the issue date when it is known | Engine, and the secretary’s tracker |
+| Score | The approved integer for one person at one competition, referencing that score’s bow style, age division, and gender. The round and the date come from the competition. The band is calculated from the record in force that day | Approval of the submission, or a later amendment |
+| Record standing | A view of the scores that set a record, refreshed after each score is written or voided. The standing record is the highest score for one round, bow style, age division, and gender. An imported record is a competition with one score, even when the event was external and only one archer is known | Read from scores |
+| GAINS award | One pin per person, bow style, age division, gender, track, and level. `pending` until the pin is handed out, then `issued`, with the issue date when it is known | Engine, and the secretary’s tracker |
 | Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
 | MembershipClaim | A request to attach a sign-in account to a membership number | Archer, then an account with `claims.approve` |
 | IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | Account with `integrations.manage` |
@@ -63,7 +64,7 @@ Scores are append-only. An amendment voids the original score and writes a repla
 
 ### Class codes
 
-The first nine bow styles line up in both workbooks. Longbow, Historical Bow, and Traditional are matched by abbreviation, because the sheets order those three differently. Confirm this against the federation class list before the seed is official.
+The first nine bow styles line up in both workbooks. Longbow, Historical Bow, and Traditional are matched by abbreviation, because the sheets order those three differently. Confirm this against the federation class list before the seed is official. A written code is the age code plus `M` or `F` plus the bow-style code. The database stores those three parts on the score and the award. The 144 codes are that product, and they are not rows.
 
 | Code | Bow style | Class code |
 | --- | --- | --- |
@@ -233,7 +234,7 @@ One migration for the entities above. Do not run Better Auth’s generator a sec
 
 ### 4. Reference seed
 
-Idempotent seed for 12 styles, 12 divisions, 144 classes, 12 rounds, and the three award tracks Indoor, Animal, and Field. Mark `SBG_ARCHIVED` as display-only. Done when running the seed twice does not duplicate rows, every round points at one of those three tracks, and parser tests cover `AFFS-R`, `AMFU`, `AMTR`, `SMBB-R`, and `AMTR(IFAF)`.
+Idempotent seed for 12 styles, 6 age divisions, 12 rounds, and the three award tracks Indoor, Animal, and Field. Gender is male or female on each score and award. Mark `SBG_ARCHIVED` as display-only. Done when running the seed twice does not duplicate rows, every round points at one of those three tracks, and parser tests cover `AFFS-R`, `AMFU`, `AMTR`, `SMBB-R`, and `AMTR(IFAF)`.
 
 ### 5. Import the workbooks
 
@@ -245,7 +246,7 @@ Idempotent seed for 12 styles, 12 divisions, 144 classes, 12 rounds, and the thr
 
 ### 7. Public pages
 
-`/records`, `/gains`, and `/archers/[membershipNumber]`, cached for an hour. A class with no record says so. Done when a browser check, desktop and narrow, filters by round, bow style, and age division, opens an archer, and shows the next required score. The public day-by-day list is `/changelog`, built in phase 10.
+`/records`, `/gains`, and `/archers/[membershipNumber]`, cached for an hour. A class with no record says so. Done when a browser check, desktop and narrow, filters by round, bow style, age division, and gender, opens an archer, and shows the next required score. The public day-by-day list is `/changelog`, built in phase 10.
 
 ### 8. System administrator and member accounts
 

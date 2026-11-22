@@ -11,7 +11,9 @@
     "db:migrate": "dotenv -e .env.local --override -- prisma migrate dev",
     "db:reset": "dotenv -e .env.local --override -- prisma migrate reset",
     "db:deploy": "dotenv -e .env.local --override -- prisma migrate deploy",
-    "db:status": "dotenv -e .env.local --override -- prisma migrate status"
+    "db:status": "dotenv -e .env.local --override -- prisma migrate status",
+    "db:seed": "dotenv -e .env.local --override -- prisma db seed",
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/lib/reference/parse-class-code.test.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",
