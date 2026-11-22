@@ -156,7 +156,7 @@ model Person {
   names            PersonName[]
   claims           MembershipClaim[]
   scores           Score[]
-  awards           GainAward[]
+  gainsAwards      GainsAward[]
 
   @@map("person")
 }
@@ -205,18 +205,18 @@ model ShootingClass {
   ageDivision   AgeDivision       @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
   entries       SubmissionEntry[]
   scores        Score[]
-  awards        GainAward[]
+  gainsAwards   GainsAward[]
 
   @@unique([bowStyleId, ageDivisionId])
   @@map("shooting_class")
 }
 
 model AwardTrack {
-  id     String      @id @default(cuid())
-  code   String      @unique
-  name   String
-  rounds Round[]
-  awards GainAward[]
+  id          String       @id @default(cuid())
+  code        String       @unique
+  name        String
+  rounds      Round[]
+  gainsAwards GainsAward[]
 
   @@map("award_track")
 }
@@ -352,7 +352,7 @@ view RecordStanding {
   @@map("record_standing")
 }
 
-model GainAward {
+model GainsAward {
   id              String        @id @default(cuid())
   personId        String
   shootingClassId String
@@ -366,7 +366,7 @@ model GainAward {
   awardTrack      AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
 
   @@unique([personId, shootingClassId, awardTrackId, level])
-  @@map("gain_award")
+  @@map("gains_award")
 }
 
 model MembershipClaim {
