@@ -178,37 +178,25 @@ model PersonName {
 }
 
 model BowStyle {
-  id      String          @id @default(cuid())
-  code    String          @unique
-  name    String
-  classes ShootingClass[]
+  id         String            @id @default(cuid())
+  code       String            @unique
+  name       String
+  entries    SubmissionEntry[]
+  scores     Score[]
+  gainsAwards GainsAward[]
 
   @@map("bow_style")
 }
 
 model AgeDivision {
-  id      String          @id @default(cuid())
-  code    String          @unique
-  name    String
-  gender  DivisionGender
-  classes ShootingClass[]
+  id          String            @id @default(cuid())
+  code        String            @unique
+  name        String
+  entries     SubmissionEntry[]
+  scores      Score[]
+  gainsAwards GainsAward[]
 
   @@map("age_division")
-}
-
-model ShootingClass {
-  id            String            @id @default(cuid())
-  code          String            @unique
-  bowStyleId    String
-  ageDivisionId String
-  bowStyle      BowStyle          @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
-  ageDivision   AgeDivision       @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
-  entries       SubmissionEntry[]
-  scores        Score[]
-  gainsAwards   GainsAward[]
-
-  @@unique([bowStyleId, ageDivisionId])
-  @@map("shooting_class")
 }
 
 model AwardTrack {
@@ -294,34 +282,42 @@ model SubmissionEntry {
   archerName       String
   club             String?
   classCode        String
-  shootingClassId  String?
+  bowStyleId       String?
+  ageDivisionId    String?
+  gender           DivisionGender?
   score            Int?
   scoreId          String?         @unique
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
   submission       ScoreSubmission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
-  shootingClass    ShootingClass?  @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
+  bowStyle         BowStyle?       @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
+  ageDivision      AgeDivision?    @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
   approvedScore    Score?          @relation(fields: [scoreId], references: [id], onDelete: Restrict)
 
+  @@index([bowStyleId, ageDivisionId, gender])
   @@index([submissionId])
   @@map("submission_entry")
 }
 
 model Score {
-  id              String           @id @default(cuid())
-  personId        String
-  shootingClassId String
-  competitionId   String
-  score           Int
-  createdAt       DateTime         @default(now())
-  person          Person           @relation(fields: [personId], references: [id], onDelete: Restrict)
-  shootingClass   ShootingClass    @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
-  competition     Competition      @relation(fields: [competitionId], references: [id], onDelete: Restrict)
-  entry           SubmissionEntry?
-  voidance        ScoreVoid?       @relation("VoidedScore")
-  replacementFor  ScoreVoid?       @relation("ReplacementScore")
+  id            String         @id @default(cuid())
+  personId      String
+  bowStyleId    String
+  ageDivisionId String
+  gender        DivisionGender
+  competitionId String
+  score         Int
+  createdAt     DateTime       @default(now())
+  person        Person         @relation(fields: [personId], references: [id], onDelete: Restrict)
+  bowStyle      BowStyle       @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
+  ageDivision   AgeDivision    @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
+  competition   Competition    @relation(fields: [competitionId], references: [id], onDelete: Restrict)
+  entry         SubmissionEntry?
+  voidance      ScoreVoid?     @relation("VoidedScore")
+  replacementFor ScoreVoid?    @relation("ReplacementScore")
 
-  @@index([personId, shootingClassId])
+  @@index([bowStyleId, ageDivisionId, gender])
+  @@index([personId, bowStyleId, ageDivisionId, gender])
   @@index([competitionId])
   @@map("score")
 }
@@ -340,32 +336,38 @@ model ScoreVoid {
 }
 
 view RecordStanding {
-  scoreId         String
-  roundId         String
-  shootingClassId String
-  personId        String
-  score           Int
-  effectiveOn     DateTime? @db.Date
-  recognisedOn    DateTime? @db.Date
+  scoreId       String
+  roundId       String
+  bowStyleId    String
+  ageDivisionId String
+  gender        DivisionGender
+  personId      String
+  score         Int
+  effectiveOn   DateTime?      @db.Date
+  recognisedOn  DateTime?      @db.Date
 
   @@unique([scoreId])
   @@map("record_standing")
 }
 
 model GainsAward {
-  id              String        @id @default(cuid())
-  personId        String
-  shootingClassId String
-  awardTrackId    String
-  level           AwardLevel
-  status          PinStatus     @default(pending)
-  issuedOn        DateTime?     @db.Date
-  createdAt       DateTime      @default(now())
-  person          Person        @relation(fields: [personId], references: [id], onDelete: Restrict)
-  shootingClass   ShootingClass @relation(fields: [shootingClassId], references: [id], onDelete: Restrict)
-  awardTrack      AwardTrack    @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
+  id            String         @id @default(cuid())
+  personId      String
+  bowStyleId    String
+  ageDivisionId String
+  gender        DivisionGender
+  awardTrackId  String
+  level         AwardLevel
+  status        PinStatus      @default(pending)
+  issuedOn      DateTime?      @db.Date
+  createdAt     DateTime       @default(now())
+  person        Person         @relation(fields: [personId], references: [id], onDelete: Restrict)
+  bowStyle      BowStyle       @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
+  ageDivision   AgeDivision    @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
+  awardTrack    AwardTrack     @relation(fields: [awardTrackId], references: [id], onDelete: Restrict)
 
-  @@unique([personId, shootingClassId, awardTrackId, level])
+  @@unique([personId, bowStyleId, ageDivisionId, gender, awardTrackId, level])
+  @@index([bowStyleId, ageDivisionId, gender])
   @@map("gains_award")
 }
 

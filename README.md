@@ -44,7 +44,7 @@ Creating, applying, and resetting the schema are Prisma commands. `psql`, `dropd
 
 Point `IFAF_AT_POSTGRES_PRISMA_URL` and `IFAF_AT_POSTGRES_URL_NON_POOLING` in `.env.local` at the local development database. On a local Postgres server the two URLs are the same string. Prisma Migrate uses the direct URL. The app uses the pooled URL. Hosted environments set the same names to the Neon pooled and direct URLs.
 
-Prisma reads `.env` and does not read `.env.local`. Load the local file with dotenv. `--override` applies `.env.local` when the shell already has database URLs. Pass `.env.local` for this work. `.env.production.local` is the hosted database.
+`prisma.config.ts` tells Prisma not to load `.env` itself, and Prisma does not read `.env.local`. Load the local file with dotenv. `--override` applies `.env.local` when the shell already has database URLs. Pass `.env.local` for this work. `.env.production.local` is the hosted database.
 
 ```bash
 pnpm exec dotenv -e .env.local --override -- prisma migrate dev
@@ -60,12 +60,15 @@ pnpm db:migrate
 pnpm db:reset
 pnpm db:status
 pnpm db:deploy
+pnpm db:seed
 ```
 
 `pnpm db:migrate` runs `prisma migrate dev`. It writes a migration from `prisma/schema.prisma`, replays the migration history on a shadow database, and applies it to the local database. Name the migration with `pnpm db:migrate -- --name domain`.
 
-`pnpm db:reset` runs `prisma migrate reset`. It drops the local database, creates it again, and applies every migration. Prisma asks for confirmation. In a non-interactive shell, run `pnpm db:reset -- --force`.
+`pnpm db:reset` runs `prisma migrate reset`. It drops the local database, creates it again, applies every migration, and then runs the seed. Prisma asks for confirmation. In a non-interactive shell, run `pnpm db:reset -- --force`.
 
 `pnpm db:deploy` runs `prisma migrate deploy` and applies migrations that are already written. A hosted deploy runs that command with `IFAF_AT_POSTGRES_URL_NON_POOLING` already in the environment.
+
+`pnpm db:seed` loads the reference rows: 12 bow styles, 6 age divisions, 12 rounds, and the Indoor, Animal, and Field award tracks. Gender is stored on each score and award. `SBG_ARCHIVED` is display-only. Running it again updates those rows and does not insert duplicates.
 
 `migrate dev` needs a local Postgres server that can create a shadow database next to the development database.
