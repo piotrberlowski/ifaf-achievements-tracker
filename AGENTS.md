@@ -8,6 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Code
+
+Follow [.cursor/rules/baseline.mdc](.cursor/rules/baseline.mdc). Those are the arc-comp development rules.
+
 ## Database
 
 Follow [Database development](README.md#database-development) before changing the schema or running Prisma. Load `.env.local` with `pnpm exec dotenv -e .env.local --override --`, or use `pnpm db:migrate`, `pnpm db:reset`, `pnpm db:status`, and `pnpm db:deploy`. `prisma migrate dev` writes and applies a migration. `prisma migrate reset` returns the local database to a blank state and migrates it forward. Reset and migrate that local database only. Schema work stays inside those Prisma commands.

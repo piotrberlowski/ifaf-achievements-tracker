@@ -69,7 +69,7 @@ pnpm db:seed
 
 `pnpm db:deploy` runs `prisma migrate deploy` and applies migrations that are already written. A hosted deploy runs that command with `IFAF_AT_POSTGRES_URL_NON_POOLING` already in the environment.
 
-`pnpm db:seed` loads the reference rows: 12 bow styles, 6 age divisions, 12 rounds, and the Indoor, Animal, and Field award tracks. Gender is stored on each score and award. `SBG_ARCHIVED` is display-only. Running it again updates those rows and does not insert duplicates.
+`pnpm db:seed` loads the reference rows: 13 bow styles, 6 age divisions, 12 rounds, and the Indoor, Animal, and Field award tracks. Gender is stored on each score and award. `SBG_ARCHIVED` is display-only. `TR_ARCHIVED` is Irish Traditional Recurve, kept apart from Traditional Recurve. Running it again updates those rows and does not insert duplicates.
 
 `pnpm import:ifaf` loads the current GAINS and records workbooks as already-approved history. Those approvals are recorded as the Membership Secretary (`membersec@ifaf.ie`). Pins already handed out in the tracker columns are stored as `issued`. Pass `--gains` and `--records`, or set `IFAF_GAINS_XLSX` and `IFAF_RECORDS_XLSX`. The membership number is the one in the workbook, without the `IRE_` prefix. Each run clears the imported people, scores, competitions, and pins first, then loads the workbooks again. Reference rows and the Membership Secretary user stay.
 

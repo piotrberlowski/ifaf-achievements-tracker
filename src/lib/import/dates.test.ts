@@ -27,13 +27,24 @@ describe("parseShotWhen", () => {
   });
 
   it("keeps a meet label when there is no calendar day", () => {
-    assert.deepEqual(parseShotWhen("EBHC 2026"), {
-      startsOn: null,
-      label: "EBHC 2026",
-    });
     assert.deepEqual(parseShotWhen("UKIFAC 2024"), {
       startsOn: null,
       label: "UKIFAC 2024",
+    });
+  });
+
+  it("dates the meets whose calendar day is known", () => {
+    assert.deepEqual(parseShotWhen("EBHC 2026"), {
+      startsOn: utcDate(2026, 6, 29),
+      label: "EBHC 2026",
+    });
+    assert.deepEqual(parseShotWhen("WIAC 2023"), {
+      startsOn: utcDate(2023, 1, 1),
+      label: "WIAC 2023",
+    });
+    assert.deepEqual(parseShotWhen("WIAMM 2016"), {
+      startsOn: utcDate(2016, 1, 1),
+      label: "WIAMM 2016",
     });
   });
 });

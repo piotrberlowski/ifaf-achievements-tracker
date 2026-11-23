@@ -14,7 +14,9 @@ export type ParsedClassCode = {
 };
 
 export function parseClassCode(input: string): ParsedClassCode | null {
-  const code = input.trim().toUpperCase().replace(/\s*\(IFAF\)$/, "");
+  const trimmed = input.trim().toUpperCase();
+  const archivedTraditional = trimmed.endsWith("(IFAF)");
+  const code = trimmed.replace(/\s*\(IFAF\)$/, "");
   const division = divisionsLongestFirst.find((candidate) =>
     code.startsWith(candidate.code),
   );
@@ -29,13 +31,17 @@ export function parseClassCode(input: string): ParsedClassCode | null {
   }
 
   const bowStyleCode = rest.slice(1);
-  const style = bowStyles.find((candidate) => candidate.code === bowStyleCode);
-  if (!style) {
+  const writtenStyle = bowStyles.find((candidate) => candidate.code === bowStyleCode);
+  const style =
+    archivedTraditional && writtenStyle?.code === "TR"
+      ? bowStyles.find((candidate) => candidate.code === "TR_ARCHIVED")
+      : writtenStyle;
+  if (!style || (archivedTraditional && writtenStyle?.code !== "TR")) {
     return null;
   }
 
   return {
-    code,
+    code: archivedTraditional ? `${code}(IFAF)` : code,
     ageDivisionCode: division.code,
     ageDivisionName: division.name,
     gender: gender.value,

@@ -46,7 +46,7 @@ const STYLE_LABELS: Record<string, string> = {
   "historical bow": "HB",
   "traditional recurve": "TR",
   "traditional recurve bow": "TR",
-  "irish-traditional (ifaf style only)": "TR",
+  "irish-traditional (ifaf style only)": "TR_ARCHIVED",
 };
 
 const AGE_LABELS: Record<string, string> = {

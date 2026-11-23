@@ -3,6 +3,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const EXCEL_SERIAL_MIN = 20000;
 const EXCEL_SERIAL_MAX = 60000;
 const SLASH_DATE = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/;
+const DATED_MEETS: Record<string, Date> = {
+  "ebhc 2026": utcDate(2026, 6, 29),
+  "wiac 2023": utcDate(2023, 1, 1),
+  "wiamm 2016": utcDate(2016, 1, 1),
+};
 
 export type ShotWhen = {
   startsOn: Date | null;
@@ -50,6 +55,11 @@ export function parseShotWhen(value: unknown): ShotWhen {
   const text = String(value).trim();
   if (!text) {
     return { startsOn: null, label: null };
+  }
+
+  const datedMeet = DATED_MEETS[text.toLowerCase()];
+  if (datedMeet) {
+    return { startsOn: datedMeet, label: text };
   }
 
   const asNumber = Number(text);
