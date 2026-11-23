@@ -109,12 +109,6 @@ async function main() {
     ),
   );
 
-  if (gainsScoreCount !== 7746) {
-    console.warn(`Expected 7746 GAINS scores, parsed ${gainsScoreCount}`);
-  }
-  if (records.records.length !== 853) {
-    console.warn(`Expected 853 standing records, parsed ${records.records.length}`);
-  }
   if (missing.length > 0 || extra.length > 0) {
     process.exitCode = 1;
   }
