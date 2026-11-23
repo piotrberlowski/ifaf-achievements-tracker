@@ -2,6 +2,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import { parseGainsWorkbook } from "../src/lib/import/gains-workbook.ts";
 import {
+  clearImportedHistory,
   loadIfafImport,
   pinIdentity,
   pinKeysFromBundle,
@@ -49,6 +50,7 @@ async function main() {
     console.warn(`${warning.sheet}: ${warning.message}`);
   }
 
+  await clearImportedHistory(prisma);
   const summary = await loadIfafImport(prisma, bundle);
 
   const issued = await readIssuedPins(prisma);

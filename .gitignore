@@ -41,6 +41,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Local copies of the IFAF workbooks.
+# Local copies of the IFAF workbooks and the note of manual corrections.
 /data/*.xlsx
 /data/*.xls
+/data/workbook-corrections.md
