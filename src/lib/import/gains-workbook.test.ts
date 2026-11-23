@@ -35,7 +35,7 @@ function addGainsSheet(
 }
 
 describe("parseGainsWorkbook", () => {
-  it("loads numeric scores and issued pins, and applies the Dempsey correction", async () => {
+  it("loads numeric scores and issued pins, and applies csv identity corrections", async () => {
     const maps = referenceMapsFromCatalog();
     const corrections = parseIdentityCorrectionsCsv(`sourceMembershipNumber,sourceFullName,targetMembershipNumber,reason
 IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number

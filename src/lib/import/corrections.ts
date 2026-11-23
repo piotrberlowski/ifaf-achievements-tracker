@@ -43,14 +43,31 @@ export function applyIdentityCorrection(
 ): string {
   const cleaned = cleanArcherName(fullName).fullName;
   for (const correction of corrections) {
-    if (
-      correction.sourceMembershipNumber === membershipNumber &&
-      namesMatch(cleaned, correction.sourceFullName)
-    ) {
+    if (matchesCorrection(membershipNumber, cleaned, correction)) {
       return correction.targetMembershipNumber;
     }
   }
   return membershipNumber;
+}
+
+export function unappliedCorrections(
+  corrections: IdentityCorrection[],
+  rows: Array<{ membershipNumber: string; archerName: string }>,
+): IdentityCorrection[] {
+  return corrections.filter((correction) =>
+    rows.some((row) => matchesCorrection(row.membershipNumber, row.archerName, correction)),
+  );
+}
+
+function matchesCorrection(
+  membershipNumber: string,
+  fullName: string,
+  correction: IdentityCorrection,
+): boolean {
+  return (
+    correction.sourceMembershipNumber === membershipNumber &&
+    namesMatch(cleanArcherName(fullName).fullName, correction.sourceFullName)
+  );
 }
 
 function splitCsvLine(line: string): string[] {
