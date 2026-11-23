@@ -1,7 +1,91 @@
 @import "tailwindcss";
 
 @plugin "daisyui" {
-  themes: corporate --default, business --prefersdark;
+  themes: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "ifaf-light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #fbfaf4;
+  --color-base-200: #eef0e8;
+  --color-base-300: #d4ddcf;
+  --color-base-content: #1e2a23;
+  --color-primary: #3f654f;
+  --color-primary-content: #fffdf6;
+  --color-secondary: #5f7564;
+  --color-secondary-content: #fffdf6;
+  --color-accent: #c69234;
+  --color-accent-content: #261c08;
+  --color-neutral: #263b31;
+  --color-neutral-content: #f8f5eb;
+  --color-info: #287d7c;
+  --color-info-content: #ffffff;
+  --color-success: #417629;
+  --color-success-content: #ffffff;
+  --color-warning: #dda52f;
+  --color-warning-content: #2a1d04;
+  --color-error: #bd493a;
+  --color-error-content: #ffffff;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@plugin "daisyui/theme" {
+  name: "ifaf-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #17251e;
+  --color-base-200: #111d17;
+  --color-base-300: #263b31;
+  --color-base-content: #f0eee4;
+  --color-primary: #9abea3;
+  --color-primary-content: #122019;
+  --color-secondary: #d4ab55;
+  --color-secondary-content: #221905;
+  --color-accent: #77b64e;
+  --color-accent-content: #13200d;
+  --color-neutral: #0b1410;
+  --color-neutral-content: #f4f0e5;
+  --color-info: #5db8b3;
+  --color-info-content: #10201f;
+  --color-success: #80bd5b;
+  --color-success-content: #14210e;
+  --color-warning: #e2b455;
+  --color-warning-content: #251b08;
+  --color-error: #e47768;
+  --color-error-content: #2b100c;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.375rem;
+  --radius-box: 0.75rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 0;
+}
+
+@custom-variant dark (&:where([data-theme="ifaf-dark"], [data-theme="ifaf-dark"] *));
+
+/* Ghost buttons use base text, which is unreadable on the dark navigation bar. */
+@utility ifaf-bar-control {
+  --btn-color: var(--color-neutral);
+  --btn-fg: var(--color-neutral-content);
+  --btn-rest-fg: var(--color-neutral-content);
+  outline-color: var(--color-neutral-content);
 }
 
 html {

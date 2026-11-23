@@ -17,7 +17,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="relative flex min-h-dvh w-full flex-col px-2">
+      <body className="relative flex min-h-dvh w-full flex-col bg-base-200 px-2 text-base-content">
         <div className="flex flex-none">
           <Navigation className="flex-1" />
         </div>
