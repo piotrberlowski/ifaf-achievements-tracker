@@ -157,8 +157,8 @@ describe("matchStandingRecords", () => {
   it("gives a synthetic number when nobody with the shared name shot that class", () => {
     const bundle = emptyBundle();
     const peopleByNumber = new Map<string, string>();
-    registerPerson(bundle, peopleByNumber, "22142", "O'Brien Michael", null);
-    registerPerson(bundle, peopleByNumber, "23063", "Michael O'Brien", null);
+    const obrienId = registerPerson(bundle, peopleByNumber, "22142", "O'Brien Michael", null);
+    const michaelId = registerPerson(bundle, peopleByNumber, "23063", "Michael O'Brien", null);
     const competitionId = "comp-uar";
     bundle.competitions.push({
       id: competitionId,
@@ -170,7 +170,7 @@ describe("matchStandingRecords", () => {
     });
     bundle.scores.push({
       id: "score-unlimited",
-      personId: bundle.people[0].id,
+      personId: obrienId,
       bowStyleId: maps.bowStyleId.get("BU") ?? "",
       ageDivisionId: maps.ageDivisionId.get("A") ?? "",
       gender: DivisionGender.male,
@@ -179,7 +179,7 @@ describe("matchStandingRecords", () => {
     });
     bundle.scores.push({
       id: "score-longbow",
-      personId: bundle.people[1].id,
+      personId: michaelId,
       bowStyleId: maps.bowStyleId.get("LB") ?? "",
       ageDivisionId: maps.ageDivisionId.get("A") ?? "",
       gender: DivisionGender.male,
