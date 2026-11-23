@@ -153,4 +153,60 @@ describe("matchStandingRecords", () => {
     assert.equal(bundle.scores.length, 1);
     assert.equal(bundle.people.length, 2);
   });
+
+  it("gives a synthetic number when nobody with the shared name shot that class", () => {
+    const bundle = emptyBundle();
+    const peopleByNumber = new Map<string, string>();
+    registerPerson(bundle, peopleByNumber, "22142", "O'Brien Michael", null);
+    registerPerson(bundle, peopleByNumber, "23063", "Michael O'Brien", null);
+    const competitionId = "comp-uar";
+    bundle.competitions.push({
+      id: competitionId,
+      name: "Club",
+      startsOn: null,
+      roundCode: "UAR",
+      roundId: maps.round.get("UAR")?.id,
+      countsForGains: true,
+    });
+    bundle.scores.push({
+      id: "score-unlimited",
+      personId: bundle.people[0].id,
+      bowStyleId: maps.bowStyleId.get("BU") ?? "",
+      ageDivisionId: maps.ageDivisionId.get("A") ?? "",
+      gender: DivisionGender.male,
+      competitionId,
+      score: 400,
+    });
+    bundle.scores.push({
+      id: "score-longbow",
+      personId: bundle.people[1].id,
+      bowStyleId: maps.bowStyleId.get("LB") ?? "",
+      ageDivisionId: maps.ageDivisionId.get("A") ?? "",
+      gender: DivisionGender.male,
+      competitionId,
+      score: 300,
+    });
+
+    const matched = matchStandingRecords(
+      [
+        {
+          roundCode: "UAR",
+          roundId: maps.round.get("UAR")?.id ?? "",
+          bowStyleId: maps.bowStyleId.get("BL") ?? "",
+          ageDivisionId: maps.ageDivisionId.get("A") ?? "",
+          gender: DivisionGender.male,
+          holderName: "Michael O'Brien",
+          score: 530,
+          startsOn: null,
+          competitionName: "Imported record",
+        },
+      ],
+      bundle,
+      maps,
+    );
+    assert.equal(matched.matched, 0);
+    assert.equal(bundle.scores.length, 3);
+    assert.equal(bundle.people[2].membershipNumber, "EXT_michael_obrien");
+    assert.equal(bundle.scores[2].personId, bundle.people[2].id);
+  });
 });

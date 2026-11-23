@@ -65,7 +65,16 @@ export function matchStandingRecords(
     }
 
     const sameName = peopleNamed(record.holderName, bundle);
-    if (sameName.length > 1) {
+    const shotThisClass = sameName.filter((person) =>
+      bundle.scores.some(
+        (score) =>
+          score.personId === person.id &&
+          score.bowStyleId === record.bowStyleId &&
+          score.ageDivisionId === record.ageDivisionId &&
+          score.gender === record.gender,
+      ),
+    );
+    if (sameName.length > 1 && shotThisClass.length > 0) {
       bundle.warnings.push({
         sheet: "records",
         message: `several members are named ${record.holderName}, and none of their GAINS scores is this ${record.roundCode} ${record.score}`,
@@ -74,7 +83,7 @@ export function matchStandingRecords(
     }
 
     const personId =
-      sameName[0]?.id ??
+      (sameName.length === 1 ? sameName[0]?.id : undefined) ??
       registerPerson(
         bundle,
         peopleByNumber,
