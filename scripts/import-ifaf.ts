@@ -1,10 +1,5 @@
-import { readFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import {
-  parseIdentityCorrectionsCsv,
-  unappliedCorrections,
-} from "../src/lib/import/corrections.ts";
 import { parseGainsWorkbook } from "../src/lib/import/gains-workbook.ts";
 import {
   loadIfafImport,
@@ -43,14 +38,9 @@ async function main() {
     arg("gains") ?? process.env.IFAF_GAINS_XLSX ?? "data/gains.xlsx";
   const recordsPath =
     arg("records") ?? process.env.IFAF_RECORDS_XLSX ?? "data/records.xlsx";
-  const correctionsPath =
-    arg("corrections") ??
-    process.env.IFAF_IDENTITY_CORRECTIONS ??
-    "data/identity-corrections.csv";
 
   const maps = await loadReferenceMaps(prisma);
-  const corrections = parseIdentityCorrectionsCsv(readFileSync(correctionsPath, "utf8"));
-  const bundle = await parseGainsWorkbook(gainsPath, maps, corrections);
+  const bundle = await parseGainsWorkbook(gainsPath, maps);
   const records = await parseRecordsWorkbook(recordsPath, maps);
   const gainsScoreCount = bundle.scores.length;
   const matched = matchStandingRecords(records.records, bundle, maps);
@@ -61,7 +51,6 @@ async function main() {
 
   const summary = await loadIfafImport(prisma, bundle);
 
-  const leftoverCorrections = unappliedCorrections(corrections, bundle.entries);
   const issued = await readIssuedPins(prisma);
   const sheetKeys = new Set(pinKeysFromBundle(bundle, maps).map(pinIdentity));
   const dbKeys = new Set(issued.map(pinIdentity));
@@ -99,10 +88,6 @@ async function main() {
           missing,
           extra,
         },
-        identityCorrections: {
-          applied: corrections.length - leftoverCorrections.length,
-          leftover: leftoverCorrections,
-        },
       },
       null,
       2,
@@ -110,9 +95,6 @@ async function main() {
   );
 
   if (missing.length > 0 || extra.length > 0) {
-    process.exitCode = 1;
-  }
-  if (leftoverCorrections.length > 0) {
     process.exitCode = 1;
   }
 }
