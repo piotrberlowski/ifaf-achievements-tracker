@@ -49,16 +49,39 @@ export function matchStandingRecords(
     const candidates = byRoundClassScore.get(
       scoreKey(record.roundId, record.bowStyleId, record.ageDivisionId, record.gender, record.score),
     ) ?? [];
-    const named = candidates.filter((score) => {
+    const held = candidates.filter((score) => {
       const entry = score.id ? entryByScoreId.get(score.id) : undefined;
       return entry ? namesMatch(entry.archerName, record.holderName) : false;
     });
-    if (named[0] || candidates.length === 1) {
+    if (held.length > 0) {
       matched += 1;
+      if (held.length > 1) {
+        bundle.warnings.push({
+          sheet: "records",
+          message: `${record.holderName} holds ${held.length} GAINS scores of ${record.score} on ${record.roundCode}`,
+        });
+      }
       continue;
     }
 
-    const personId = resolveHolder(record.holderName, bundle, peopleByNumber);
+    const sameName = peopleNamed(record.holderName, bundle);
+    if (sameName.length > 1) {
+      bundle.warnings.push({
+        sheet: "records",
+        message: `several members are named ${record.holderName}, and none of their GAINS scores is this ${record.roundCode} ${record.score}`,
+      });
+      continue;
+    }
+
+    const personId =
+      sameName[0]?.id ??
+      registerPerson(
+        bundle,
+        peopleByNumber,
+        unmatchedMembershipNumber(record.holderName),
+        record.holderName.trim(),
+        null,
+      );
     const person = bundle.people.find((row) => row.id === personId);
     const membershipNumber = person?.membershipNumber ?? unmatchedMembershipNumber(record.holderName);
     const competitionId = randomUUID();
@@ -128,33 +151,11 @@ function scoreKey(
   return `${roundId}|${bowStyleId}|${ageDivisionId}|${gender}|${score}`;
 }
 
-function resolveHolder(
-  holderName: string,
-  bundle: ImportBundle,
-  peopleByNumber: Map<string, string>,
-): string {
-  const matches = bundle.people.filter((person) =>
+function peopleNamed(holderName: string, bundle: ImportBundle) {
+  return bundle.people.filter((person) =>
     bundle.names.some(
       (name) => name.personId === person.id && namesMatch(name.fullName, holderName),
     ),
-  );
-  if (matches.length === 1 && matches[0].id) {
-    return matches[0].id;
-  }
-  if (matches.length > 1) {
-    const ire = matches.filter((person) => person.membershipNumber.startsWith("IRE_"));
-    const chosen = ire[0] ?? matches[0];
-    if (chosen.id) {
-      return chosen.id;
-    }
-  }
-
-  return registerPerson(
-    bundle,
-    peopleByNumber,
-    unmatchedMembershipNumber(holderName),
-    holderName.trim(),
-    null,
   );
 }
 

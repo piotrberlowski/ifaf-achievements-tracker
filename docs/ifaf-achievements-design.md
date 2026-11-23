@@ -35,7 +35,7 @@ Expert and International have records and cutoffs, and no GAINS score cells in t
 | Workbook fact | What the system stores |
 | --- | --- |
 | One row per membership number and class code | A person has many class careers. Awards stay on the class that was shot. |
-| 79 numbers have more than one spelling; 32 have more than one surname | A new surname with the same given name is a former name. Two given names on one number are two archers. Una Dempsey keeps `IRE_17010`. David Dempsey is `IRE_17011`; the SBG rows that call him `IRE_17010` move to `IRE_17011`. |
+| 79 numbers have more than one spelling; 32 have more than one surname | A new surname with the same given name is a former name. Two given names on one number are two archers. The workbook writes `IRE_` in front of the membership number; the stored number does not. Una Dempsey keeps `17010`. David Dempsey is `17011`; the SBG rows filed as `17010` under his name move to `17011`. |
 | Tracker cells such as `GOLD,g,g` and `b` | The membership secretary’s note of pins already handed out. A pin on that list is not handed out again in the same class and track. |
 | Lower case is a qualifying score; capitals are a pin | Persist the band and the pin. One gold-band score is not yet a Gold award. |
 | RIP, LEGEND, and quoted nicknames sit in the name cell | Official name is separate from a note. |
@@ -117,7 +117,7 @@ These sentences are in the GAINS Info sheet.
 | Person | Route | Gate |
 | --- | --- | --- |
 | Archer setting a goal | `/gains?round=field&class=AMBH-R` | Public |
-| Archer | `/archers/IRE_22008` for any member. `/me` after an account with `claims.approve` accepts that account’s claim | Public page, or an approved membership claim for `/me` |
+| Archer | `/archers/22008` for any member. `/me` after an account with `claims.approve` accepts that account’s claim | Public page, or an approved membership claim for `/me` |
 | Archer checking records held | The same archer page | Public |
 | Submission reviewer | `/review?status=pending`. Upload a result, modify a submission, approve the whole submission, or amend an official entry | Permission `submissions.approve` |
 | Anyone | `/changelog`, and `/changelog/2026-11-14` for one day | Public |
@@ -200,9 +200,9 @@ A person can hold more than one of these. Holding one does not include the other
 
 ## Member accounts
 
-An archer signs in with Google or Auth0 and opens `/me`. The account has no membership number until the archer submits a claim for one, for example `IRE_22008`. An account with `claims.approve` approves or rejects that claim. After approval, `/me` shows that member’s pins, the next score on each track, and the records they hold. An account with `names.approve` can approve a new official name for that membership number. The previous name is kept, with who approved the change and when. Public pages for that number then show the new name.
+An archer signs in with Google or Auth0 and opens `/me`. The account has no membership number until the archer submits a claim for one, for example `22008`. An account with `claims.approve` approves or rejects that claim. After approval, `/me` shows that member’s pins, the next score on each track, and the records they hold. An account with `names.approve` can approve a new official name for that membership number. The previous name is kept, with who approved the change and when. Public pages for that number then show the new name.
 
-`/archers/IRE_22008` shows the same pins and records without a sign-in.
+`/archers/22008` shows the same pins and records without a sign-in.
 
 ## Tournament review
 
@@ -238,7 +238,7 @@ Idempotent seed for 12 styles, 6 age divisions, 12 rounds, and the three award t
 
 ### 5. Import the workbooks
 
-`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. A standing record that is not already one of those scores becomes its own competition and one score, even when the event was external and only that archer is known. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. A record-only event has `countsForGains` false. Pins already handed out are stored as `issued`. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `IRE_17010` Dempsey David move to `IRE_17011`; Una Dempsey keeps `IRE_17010`. Done when a fresh import matches those counts, David’s SBG scores are on `IRE_17011`, Una’s scores remain on `IRE_17010`, and a second run does not duplicate scores.
+`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. A standing record that is not already one of those scores becomes its own competition and one score, even when the event was external and only that archer is known. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. A record-only event has `countsForGains` false. Pins already handed out are stored as `issued`. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `17010` Dempsey David move to `17011`; Una Dempsey keeps `17010`. Done when a fresh import matches those counts, David’s SBG scores are on `17011`, Una’s scores remain on `17010`, and a second run does not duplicate scores.
 
 ### 6. GAINS engine
 

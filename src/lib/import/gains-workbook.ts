@@ -14,11 +14,10 @@ import {
 } from "./cells.ts";
 import { parseShotWhen } from "./dates.ts";
 import { classParts, columnLetters, gainsSheetSpecs, roundCodeFromLabel } from "./labels.ts";
+import { membershipNumberFromSheet } from "./membership.ts";
 import { cleanArcherName } from "./names.ts";
 import { requiredId, requiredRound, type ReferenceMaps } from "./reference.ts";
 import { parseIssuedPins } from "./tracker.ts";
-
-const MEMBERSHIP = /^IRE_\d+$/i;
 
 export async function parseGainsWorkbook(
   source: string | Buffer | ArrayBuffer,
@@ -114,7 +113,8 @@ function parseGainsSheet(args: {
   for (let rowNumber = 1; rowNumber <= rows; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
     const membershipRaw = cellText(row.getCell(1));
-    if (!MEMBERSHIP.test(membershipRaw)) {
+    const sheetMembership = membershipNumberFromSheet(membershipRaw);
+    if (!sheetMembership) {
       continue;
     }
     const archerName = cellText(row.getCell(2));
@@ -128,11 +128,7 @@ function parseGainsSheet(args: {
       continue;
     }
 
-    const membershipNumber = applyIdentityCorrection(
-      membershipRaw.toUpperCase(),
-      archerName,
-      corrections,
-    );
+    const membershipNumber = applyIdentityCorrection(sheetMembership, archerName, corrections);
     const cleaned = cleanArcherName(archerName);
     const fullName = cleaned.fullName || archerName;
     const personId = registerPerson(

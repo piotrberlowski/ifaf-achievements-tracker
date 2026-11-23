@@ -1,3 +1,4 @@
+import { membershipNumberFromSheet } from "./membership.ts";
 import { cleanArcherName, namesMatch } from "./names.ts";
 
 export type IdentityCorrection = {
@@ -27,10 +28,15 @@ export function parseIdentityCorrectionsCsv(text: string): IdentityCorrection[] 
 
   return lines.slice(1).map((line) => {
     const cells = splitCsvLine(line);
+    const sourceMembershipNumber = membershipNumberFromSheet(cells[sourceIndex] ?? "");
+    const targetMembershipNumber = membershipNumberFromSheet(cells[targetIndex] ?? "");
+    if (!sourceMembershipNumber || !targetMembershipNumber) {
+      throw new Error(`identity correction has no membership number: ${line}`);
+    }
     return {
-      sourceMembershipNumber: cells[sourceIndex]?.trim() ?? "",
+      sourceMembershipNumber,
       sourceFullName: cells[nameIndex]?.trim() ?? "",
-      targetMembershipNumber: cells[targetIndex]?.trim() ?? "",
+      targetMembershipNumber,
       reason: (reasonIndex >= 0 ? cells[reasonIndex] : "")?.trim() ?? "",
     };
   });

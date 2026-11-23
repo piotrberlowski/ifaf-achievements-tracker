@@ -11,30 +11,26 @@ IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
 `;
 
 describe("identity corrections", () => {
-  it("rewrites only the source number and name from the csv", () => {
+  it("stores the membership number without the workbook prefix", () => {
     const corrections = parseIdentityCorrectionsCsv(csv);
-    assert.equal(
-      applyIdentityCorrection("IRE_17010", "Dempsey David", corrections),
-      "IRE_17011",
-    );
-    assert.equal(
-      applyIdentityCorrection("IRE_17010", "Dempsey Una", corrections),
-      "IRE_17010",
-    );
+    assert.equal(corrections[0].sourceMembershipNumber, "17010");
+    assert.equal(corrections[0].targetMembershipNumber, "17011");
+    assert.equal(applyIdentityCorrection("17010", "Dempsey David", corrections), "17011");
+    assert.equal(applyIdentityCorrection("17010", "Dempsey Una", corrections), "17010");
   });
 
   it("reports rows that still match a csv correction", () => {
     const corrections = parseIdentityCorrectionsCsv(csv);
     assert.deepEqual(
       unappliedCorrections(corrections, [
-        { membershipNumber: "IRE_17010", archerName: "Dempsey Una" },
-        { membershipNumber: "IRE_17011", archerName: "Dempsey David" },
+        { membershipNumber: "17010", archerName: "Dempsey Una" },
+        { membershipNumber: "17011", archerName: "Dempsey David" },
       ]),
       [],
     );
     assert.equal(
       unappliedCorrections(corrections, [
-        { membershipNumber: "IRE_17010", archerName: "Dempsey David" },
+        { membershipNumber: "17010", archerName: "Dempsey David" },
       ]).length,
       1,
     );
