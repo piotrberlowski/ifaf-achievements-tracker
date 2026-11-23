@@ -18,6 +18,7 @@ export async function loadIfafImport(
   bundle: ImportBundle,
 ): Promise<ImportSummary> {
   const approvedById = await upsertApprover(prisma);
+  await stripWorkbookMembershipPrefix(prisma);
   const personRewrite = await insertPeople(prisma, bundle, approvedById);
 
   const scores = bundle.scores.map((score) => ({
@@ -63,6 +64,24 @@ export async function loadIfafImport(
     pinsCreated: pinResult.created,
     pinsSkipped: pinResult.skipped,
   };
+}
+
+async function stripWorkbookMembershipPrefix(prisma: PrismaClient) {
+  const people = await prisma.person.findMany({
+    select: { membershipNumber: true },
+  });
+  const stored = new Set(people.map((person) => person.membershipNumber));
+  for (const person of people) {
+    const bare = person.membershipNumber.match(/^IRE_(\d+)$/i)?.[1];
+    if (bare && stored.has(bare)) {
+      throw new Error(`Membership ${bare} is already stored with and without the workbook prefix`);
+    }
+  }
+  await prisma.$executeRaw`
+    UPDATE "person"
+    SET "membershipNumber" = regexp_replace("membershipNumber", '^IRE_', '', 'i')
+    WHERE "membershipNumber" ~* '^IRE_[0-9]+$'
+  `;
 }
 
 async function insertPeople(

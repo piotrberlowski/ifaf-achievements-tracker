@@ -38,7 +38,7 @@ describe("parseGainsWorkbook", () => {
   it("loads numeric scores and issued pins, and applies csv identity corrections", async () => {
     const maps = referenceMapsFromCatalog();
     const corrections = parseIdentityCorrectionsCsv(`sourceMembershipNumber,sourceFullName,targetMembershipNumber,reason
-IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
+17010,Dempsey David,17011,SBG scores filed under Una Dempsey's number
 `);
     const buffer = await workbookBuffer((workbook) => {
       const indoor = addGainsSheet(workbook, "Gains Indoor", "F", [
@@ -67,8 +67,8 @@ IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
 
     const parsed = await parseGainsWorkbook(buffer, maps, corrections);
     assert.equal(parsed.scores.length, 3);
-    const una = parsed.people.find((person) => person.membershipNumber === "IRE_17010");
-    const david = parsed.people.find((person) => person.membershipNumber === "IRE_17011");
+    const una = parsed.people.find((person) => person.membershipNumber === "17010");
+    const david = parsed.people.find((person) => person.membershipNumber === "17011");
     assert.ok(una?.id);
     assert.ok(david?.id);
     const unaScores = parsed.scores.filter((score) => score.personId === una.id);
@@ -89,11 +89,8 @@ IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
           return `${membership}:${track}:${award.level}`;
         })
         .sort(),
-      ["IRE_17010:INDOOR:gold", "IRE_17011:ANIMAL:gold"],
+      ["17010:INDOOR:gold", "17011:ANIMAL:gold"],
     );
-    assert.equal(
-      applyIdentityCorrection("IRE_17010", "Dempsey David", corrections),
-      "IRE_17011",
-    );
+    assert.equal(applyIdentityCorrection("17010", "Dempsey David", corrections), "17011");
   });
 });
