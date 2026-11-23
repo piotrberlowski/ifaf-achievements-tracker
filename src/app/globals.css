@@ -3,3 +3,7 @@
 @plugin "daisyui" {
   themes: corporate --default, business --prefersdark;
 }
+
+html {
+  scrollbar-gutter: stable;
+}
