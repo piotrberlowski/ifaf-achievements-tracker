@@ -40,3 +40,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local copies of the IFAF workbooks.
+/data/*.xlsx
+/data/*.xls

@@ -13,7 +13,8 @@
     "db:deploy": "dotenv -e .env.local --override -- prisma migrate deploy",
     "db:status": "dotenv -e .env.local --override -- prisma migrate status",
     "db:seed": "dotenv -e .env.local --override -- prisma db seed",
-    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/lib/reference/parse-class-code.test.ts"
+    "import:ifaf": "dotenv -e .env.local --override -- node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-ifaf.ts",
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/lib/reference/parse-class-code.test.ts src/lib/import/*.test.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",
@@ -22,6 +23,7 @@
     "@prisma/client": "6.19.0",
     "better-auth": "^1.7.23",
     "daisyui": "^5.8.0",
+    "exceljs": "^4.4.0",
     "next": "16.4.6",
     "pg": "^8.23.1",
     "react": "19.3.0",
