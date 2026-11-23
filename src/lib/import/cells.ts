@@ -9,7 +9,9 @@ export async function readWorkbook(source: string | Buffer | ArrayBuffer): Promi
   if (typeof source === "string") {
     await workbook.xlsx.readFile(source);
   } else {
-    await workbook.xlsx.load(source);
+    const bytes = source instanceof ArrayBuffer ? new Uint8Array(source) : Uint8Array.from(source);
+    // exceljs types Buffer from an older @types/node than this project.
+    await workbook.xlsx.load(Buffer.from(bytes) as never);
   }
   return workbook;
 }
