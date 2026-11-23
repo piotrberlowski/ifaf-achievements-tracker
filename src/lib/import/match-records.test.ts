@@ -1,69 +1,101 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { DivisionGender } from "@prisma/client";
+import { emptyBundle, registerPerson } from "./bundle.ts";
 import { matchStandingRecords } from "./match-records.ts";
-import type { ImportPerson, ImportScore, StandingRecord } from "./types.ts";
+import { referenceMapsFromCatalog } from "./reference.ts";
+
+const maps = referenceMapsFromCatalog();
 
 describe("matchStandingRecords", () => {
   it("reuses a GAINS score with the same round, class, and score", () => {
-    const people: ImportPerson[] = [
-      { membershipNumber: "IRE_1", names: [{ fullName: "Gilmore Peter", note: null }] },
-    ];
-    const scores: ImportScore[] = [
-      {
-        competitionExternalId: "gains:bowhunter:J",
-        membershipNumber: "IRE_1",
-        archerName: "Gilmore Peter",
-        classCode: "SMBB-R",
-        bowStyleCode: "BB-R",
-        ageDivisionCode: "S",
-        gender: "male",
-        score: 460,
-      },
-    ];
-    const records: StandingRecord[] = [
-      {
-        roundCode: "UAR",
-        bowStyleCode: "BB-R",
-        ageDivisionCode: "S",
-        gender: "male",
-        holderName: "Peter Gilmore",
-        score: 460,
-        startsOn: null,
-        competitionName: "EBHC 2026",
-      },
-    ];
+    const bundle = emptyBundle();
+    const peopleByNumber = new Map<string, string>();
+    const personId = registerPerson(bundle, peopleByNumber, "IRE_1", "Gilmore Peter", null);
+    const competitionId = "comp-1";
+    const submissionId = "sub-1";
+    const scoreId = "score-1";
+    bundle.competitions.push({
+      id: competitionId,
+      name: "EBHC",
+      startsOn: null,
+      roundCode: "UAR",
+      roundId: maps.round.get("UAR")?.id,
+      countsForGains: true,
+    });
+    bundle.submissions.push({
+      id: submissionId,
+      competitionId,
+      status: "pending",
+      source: "import",
+      externalId: "gains:bowhunter:J",
+    });
+    bundle.scores.push({
+      id: scoreId,
+      personId,
+      bowStyleId: maps.bowStyleId.get("BB-R") ?? "",
+      ageDivisionId: maps.ageDivisionId.get("S") ?? "",
+      gender: DivisionGender.male,
+      competitionId,
+      score: 460,
+    });
+    bundle.entries.push({
+      submissionId,
+      membershipNumber: "IRE_1",
+      archerName: "Gilmore Peter",
+      classCode: "SMBB-R",
+      bowStyleId: maps.bowStyleId.get("BB-R"),
+      ageDivisionId: maps.ageDivisionId.get("S"),
+      gender: DivisionGender.male,
+      score: 460,
+      scoreId,
+    });
+
     const matched = matchStandingRecords(
-      records,
-      people,
-      scores,
-      new Map([["gains:bowhunter:J", "UAR"]]),
+      [
+        {
+          roundCode: "UAR",
+          roundId: maps.round.get("UAR")?.id ?? "",
+          bowStyleId: maps.bowStyleId.get("BB-R") ?? "",
+          ageDivisionId: maps.ageDivisionId.get("S") ?? "",
+          gender: DivisionGender.male,
+          holderName: "Peter Gilmore",
+          score: 460,
+          startsOn: null,
+          competitionName: "EBHC 2026",
+        },
+      ],
+      bundle,
+      maps,
     );
     assert.equal(matched.matched, 1);
-    assert.equal(matched.scores.length, 0);
+    assert.equal(bundle.scores.length, 1);
   });
 
   it("creates a record-only score when the standing record is not already in GAINS", () => {
+    const bundle = emptyBundle();
     const matched = matchStandingRecords(
       [
         {
           roundCode: "EXPERT",
-          bowStyleCode: "BU",
-          ageDivisionCode: "A",
-          gender: "male",
+          roundId: maps.round.get("EXPERT")?.id ?? "",
+          bowStyleId: maps.bowStyleId.get("BU") ?? "",
+          ageDivisionId: maps.ageDivisionId.get("A") ?? "",
+          gender: DivisionGender.male,
           holderName: "Terry Dempsey",
           score: 353,
           startsOn: null,
           competitionName: "UKIFAC 2016",
         },
       ],
-      [],
-      [],
-      new Map(),
+      bundle,
+      maps,
     );
     assert.equal(matched.matched, 0);
-    assert.equal(matched.scores.length, 1);
-    assert.equal(matched.competitions[0].countsForGains, false);
-    assert.equal(matched.competitions[0].name, "UKIFAC 2016");
-    assert.match(matched.people[0].membershipNumber, /^EXT_/);
+    assert.equal(bundle.scores.length, 1);
+    assert.equal(bundle.competitions[0].countsForGains, false);
+    assert.equal(bundle.competitions[0].name, "UKIFAC 2016");
+    assert.equal(bundle.competitions[0].roundId, maps.round.get("EXPERT")?.id);
+    assert.match(bundle.people[0].membershipNumber, /^EXT_/);
   });
 });

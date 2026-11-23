@@ -1,4 +1,7 @@
+import { randomUUID } from "node:crypto";
+import { PinStatus } from "@prisma/client";
 import type ExcelJS from "exceljs";
+import { emptyBundle, registerPerson, type ImportBundle } from "./bundle.ts";
 import { applyIdentityCorrection, type IdentityCorrection } from "./corrections.ts";
 import {
   cellNumber,
@@ -12,78 +15,51 @@ import {
 import { parseShotWhen } from "./dates.ts";
 import { classParts, columnLetters, gainsSheetSpecs, roundCodeFromLabel } from "./labels.ts";
 import { cleanArcherName } from "./names.ts";
+import { requiredId, requiredRound, type ReferenceMaps } from "./reference.ts";
 import { parseIssuedPins } from "./tracker.ts";
-import type {
-  ImportCompetition,
-  ImportPerson,
-  ImportPin,
-  ImportScore,
-  ParseWarning,
-} from "./types.ts";
 
 const MEMBERSHIP = /^IRE_\d+$/i;
 
-export type ParsedGains = {
-  people: ImportPerson[];
-  competitions: ImportCompetition[];
-  scores: ImportScore[];
-  pins: ImportPin[];
-  warnings: ParseWarning[];
-};
-
 export async function parseGainsWorkbook(
   source: string | Buffer | ArrayBuffer,
+  maps: ReferenceMaps,
   corrections: IdentityCorrection[],
-): Promise<ParsedGains> {
+): Promise<ImportBundle> {
   const workbook = await readWorkbook(source);
-  const people = new Map<string, ImportPerson>();
-  const competitions: ImportCompetition[] = [];
-  const scores: ImportScore[] = [];
+  const bundle = emptyBundle();
+  const peopleByNumber = new Map<string, string>();
   const pinKeys = new Set<string>();
-  const pins: ImportPin[] = [];
-  const warnings: ParseWarning[] = [];
 
   for (const spec of gainsSheetSpecs) {
     const sheet = workbook.getWorksheet(spec.name);
     if (!sheet) {
-      warnings.push({ sheet: spec.name, message: "sheet is missing" });
+      bundle.warnings.push({ sheet: spec.name, message: "sheet is missing" });
       continue;
     }
     parseGainsSheet({
       sheet,
       spec,
+      maps,
       corrections,
-      people,
-      competitions,
-      scores,
-      pins,
+      bundle,
+      peopleByNumber,
       pinKeys,
-      warnings,
     });
   }
 
-  return {
-    people: [...people.values()],
-    competitions,
-    scores,
-    pins,
-    warnings,
-  };
+  return bundle;
 }
 
 function parseGainsSheet(args: {
   sheet: ExcelJS.Worksheet;
   spec: (typeof gainsSheetSpecs)[number];
+  maps: ReferenceMaps;
   corrections: IdentityCorrection[];
-  people: Map<string, ImportPerson>;
-  competitions: ImportCompetition[];
-  scores: ImportScore[];
-  pins: ImportPin[];
+  bundle: ImportBundle;
+  peopleByNumber: Map<string, string>;
   pinKeys: Set<string>;
-  warnings: ParseWarning[];
 }) {
-  const { sheet, spec, corrections, people, competitions, scores, pins, pinKeys, warnings } =
-    args;
+  const { sheet, spec, maps, corrections, bundle, peopleByNumber, pinKeys } = args;
   const cols = columnCount(sheet);
   const rows = rowCount(sheet);
   const eventRow = findLabeledRow(sheet, "event");
@@ -92,14 +68,14 @@ function parseGainsSheet(args: {
   const trackerCol = findTrackerColumn(sheet, cols);
 
   if (!eventRow || !dateRow || !roundRow) {
-    warnings.push({
+    bundle.warnings.push({
       sheet: spec.name,
       message: "could not find Event, Date, and Round header rows",
     });
     return;
   }
 
-  type CompCol = { column: number; competition: ImportCompetition };
+  type CompCol = { column: number; competitionId: string; submissionId: string };
   const competitionCols: CompCol[] = [];
   for (let column = 4; column <= cols; column += 1) {
     if (column === trackerCol) {
@@ -110,19 +86,30 @@ function parseGainsSheet(args: {
     if (!roundCode) {
       continue;
     }
+    const round = requiredRound(maps, roundCode);
     const eventName = cellText(sheet.getRow(eventRow).getCell(column)) || "Imported competition";
     const when = parseShotWhen(cellScalar(sheet.getRow(dateRow).getCell(column)));
-    const externalId = `gains:${spec.slug}:${columnLetters(column)}`;
-    const competition: ImportCompetition = {
-      externalId,
+    const competitionId = randomUUID();
+    const submissionId = randomUUID();
+    bundle.competitions.push({
+      id: competitionId,
       name: eventName,
       startsOn: when.startsOn,
-      roundCode,
+      roundCode: round.code,
+      roundId: round.id,
       countsForGains: true,
-    };
-    competitions.push(competition);
-    competitionCols.push({ column, competition });
+    });
+    bundle.submissions.push({
+      id: submissionId,
+      competitionId,
+      status: "pending",
+      source: "import",
+      externalId: `gains:${spec.slug}:${columnLetters(column)}`,
+    });
+    competitionCols.push({ column, competitionId, submissionId });
   }
+
+  const awardTrackId = requiredId(maps.awardTrackId, spec.awardTrackCode, "award track");
 
   for (let rowNumber = 1; rowNumber <= rows; rowNumber += 1) {
     const row = sheet.getRow(rowNumber);
@@ -134,7 +121,7 @@ function parseGainsSheet(args: {
     const classCodeRaw = cellText(row.getCell(3));
     const parsedClass = classParts(classCodeRaw);
     if (!parsedClass) {
-      warnings.push({
+      bundle.warnings.push({
         sheet: spec.name,
         message: `unrecognised class ${classCodeRaw || "(empty)"} for ${membershipRaw}`,
       });
@@ -148,56 +135,65 @@ function parseGainsSheet(args: {
     );
     const cleaned = cleanArcherName(archerName);
     const fullName = cleaned.fullName || archerName;
-    const existing = people.get(membershipNumber);
-    if (!existing) {
-      people.set(membershipNumber, {
-        membershipNumber,
-        names: [{ fullName, note: cleaned.note }],
-      });
-    } else if (!existing.names.some((name) => name.fullName === fullName)) {
-      existing.names.push({ fullName, note: cleaned.note });
-    }
+    const personId = registerPerson(
+      bundle,
+      peopleByNumber,
+      membershipNumber,
+      fullName,
+      cleaned.note,
+    );
+    const bowStyleId = requiredId(maps.bowStyleId, parsedClass.bowStyleCode, "bow style");
+    const ageDivisionId = requiredId(
+      maps.ageDivisionId,
+      parsedClass.ageDivisionCode,
+      "age division",
+    );
 
-    for (const { column, competition } of competitionCols) {
+    for (const { column, competitionId, submissionId } of competitionCols) {
       const score = integerScore(cellScalar(row.getCell(column)) ?? cellNumber(row.getCell(column)));
       if (score == null) {
         continue;
       }
-      scores.push({
-        competitionExternalId: competition.externalId,
+      const scoreId = randomUUID();
+      bundle.scores.push({
+        id: scoreId,
+        personId,
+        bowStyleId,
+        ageDivisionId,
+        gender: parsedClass.gender,
+        competitionId,
+        score,
+      });
+      bundle.entries.push({
+        submissionId,
         membershipNumber,
-        archerName: cleaned.fullName || archerName,
+        archerName: fullName,
         classCode: parsedClass.code,
-        bowStyleCode: parsedClass.bowStyleCode,
-        ageDivisionCode: parsedClass.ageDivisionCode,
+        bowStyleId,
+        ageDivisionId,
         gender: parsedClass.gender,
         score,
+        scoreId,
       });
     }
 
     if (trackerCol) {
-      const issued = parseIssuedPins(cellText(row.getCell(trackerCol)));
-      for (const level of issued) {
-        const key = [
-          membershipNumber,
-          parsedClass.bowStyleCode,
-          parsedClass.ageDivisionCode,
-          parsedClass.gender,
-          spec.awardTrackCode,
-          level,
-        ].join("|");
+      for (const level of parseIssuedPins(cellText(row.getCell(trackerCol)))) {
+        const key = [personId, bowStyleId, ageDivisionId, parsedClass.gender, awardTrackId, level].join(
+          "|",
+        );
         if (pinKeys.has(key)) {
           continue;
         }
         pinKeys.add(key);
-        pins.push({
-          membershipNumber,
-          classCode: parsedClass.code,
-          bowStyleCode: parsedClass.bowStyleCode,
-          ageDivisionCode: parsedClass.ageDivisionCode,
+        bundle.awards.push({
+          personId,
+          bowStyleId,
+          ageDivisionId,
           gender: parsedClass.gender,
-          awardTrackCode: spec.awardTrackCode,
+          awardTrackId,
           level,
+          status: PinStatus.issued,
         });
       }
     }

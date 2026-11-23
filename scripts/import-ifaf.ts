@@ -6,10 +6,12 @@ import { parseGainsWorkbook } from "../src/lib/import/gains-workbook.ts";
 import {
   loadIfafImport,
   pinIdentity,
+  pinKeysFromBundle,
   readIssuedPins,
 } from "../src/lib/import/load-ifaf.ts";
 import { matchStandingRecords } from "../src/lib/import/match-records.ts";
 import { parseRecordsWorkbook } from "../src/lib/import/records-workbook.ts";
+import { loadReferenceMaps } from "../src/lib/import/reference.ts";
 
 const connectionString =
   process.env.IFAF_AT_POSTGRES_URL_NON_POOLING ??
@@ -43,41 +45,21 @@ async function main() {
     process.env.IFAF_IDENTITY_CORRECTIONS ??
     "data/identity-corrections.csv";
 
+  const maps = await loadReferenceMaps(prisma);
   const corrections = parseIdentityCorrectionsCsv(readFileSync(correctionsPath, "utf8"));
-  const gains = await parseGainsWorkbook(gainsPath, corrections);
-  const records = await parseRecordsWorkbook(recordsPath);
-  const competitionRounds = new Map(
-    gains.competitions.map((competition) => [competition.externalId, competition.roundCode]),
-  );
-  const matched = matchStandingRecords(
-    records.records,
-    gains.people,
-    gains.scores,
-    competitionRounds,
-  );
+  const bundle = await parseGainsWorkbook(gainsPath, maps, corrections);
+  const records = await parseRecordsWorkbook(recordsPath, maps);
+  const gainsScoreCount = bundle.scores.length;
+  const matched = matchStandingRecords(records.records, bundle, maps);
 
-  const peopleByNumber = new Map(
-    gains.people.map((person) => [person.membershipNumber, person]),
-  );
-  for (const person of matched.people) {
-    if (!peopleByNumber.has(person.membershipNumber)) {
-      gains.people.push(person);
-    }
-  }
-
-  for (const warning of [...gains.warnings, ...records.warnings]) {
+  for (const warning of [...bundle.warnings, ...records.warnings]) {
     console.warn(`${warning.sheet}: ${warning.message}`);
   }
 
-  const summary = await loadIfafImport(prisma, {
-    people: gains.people,
-    competitions: [...gains.competitions, ...matched.competitions],
-    scores: [...gains.scores, ...matched.scores],
-    pins: gains.pins,
-  });
+  const summary = await loadIfafImport(prisma, bundle);
 
   const issued = await readIssuedPins(prisma);
-  const sheetKeys = new Set(gains.pins.map(pinIdentity));
+  const sheetKeys = new Set(pinKeysFromBundle(bundle, maps).map(pinIdentity));
   const dbKeys = new Set(issued.map(pinIdentity));
   const missing = [...sheetKeys].filter((key) => !dbKeys.has(key)).sort();
   const extra = [...dbKeys].filter((key) => !sheetKeys.has(key)).sort();
@@ -103,12 +85,12 @@ async function main() {
     JSON.stringify(
       {
         parsed: {
-          gainsScores: gains.scores.length,
+          gainsScores: gainsScoreCount,
           standingRecords: records.records.length,
           standingMatchedToGains: matched.matched,
-          recordOnlyScores: matched.scores.length,
-          issuedPinsOnSheet: gains.pins.length,
-          people: gains.people.length,
+          recordOnlyScores: bundle.scores.length - gainsScoreCount,
+          issuedPinsOnSheet: bundle.awards.length,
+          people: bundle.people.length,
         },
         loaded: {
           ...summary,
@@ -135,8 +117,8 @@ async function main() {
     ),
   );
 
-  if (gains.scores.length !== 7746) {
-    console.warn(`Expected 7746 GAINS scores, parsed ${gains.scores.length}`);
+  if (gainsScoreCount !== 7746) {
+    console.warn(`Expected 7746 GAINS scores, parsed ${gainsScoreCount}`);
   }
   if (records.records.length !== 853) {
     console.warn(`Expected 853 standing records, parsed ${records.records.length}`);
