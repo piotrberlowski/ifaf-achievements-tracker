@@ -71,6 +71,6 @@ pnpm db:seed
 
 `pnpm db:seed` loads the reference rows: 12 bow styles, 6 age divisions, 12 rounds, and the Indoor, Animal, and Field award tracks. Gender is stored on each score and award. `SBG_ARCHIVED` is display-only. Running it again updates those rows and does not insert duplicates.
 
-`pnpm import:ifaf` loads the current GAINS and records workbooks as already-approved history. Those approvals are recorded as the Membership Secretary (`membersec@ifaf.ie`). Pins already handed out in the tracker columns are stored as `issued`. Pass `--gains` and `--records`, or set `IFAF_GAINS_XLSX` and `IFAF_RECORDS_XLSX`. Identity fixes are in `data/identity-corrections.csv`. A second run does not duplicate scores.
+`pnpm import:ifaf` loads the current GAINS and records workbooks as already-approved history. Those approvals are recorded as the Membership Secretary (`membersec@ifaf.ie`). Pins already handed out in the tracker columns are stored as `issued`. Pass `--gains` and `--records`, or set `IFAF_GAINS_XLSX` and `IFAF_RECORDS_XLSX`. The membership number is the one in the workbook, without the `IRE_` prefix. A second run does not duplicate scores.
 
 `migrate dev` needs a local Postgres server that can create a shadow database next to the development database.

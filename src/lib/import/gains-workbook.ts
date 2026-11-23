@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { PinStatus } from "@prisma/client";
 import type ExcelJS from "exceljs";
 import { emptyBundle, registerPerson, type ImportBundle } from "./bundle.ts";
-import { applyIdentityCorrection, type IdentityCorrection } from "./corrections.ts";
 import {
   cellNumber,
   cellScalar,
@@ -22,7 +21,6 @@ import { parseIssuedPins } from "./tracker.ts";
 export async function parseGainsWorkbook(
   source: string | Buffer | ArrayBuffer,
   maps: ReferenceMaps,
-  corrections: IdentityCorrection[],
 ): Promise<ImportBundle> {
   const workbook = await readWorkbook(source);
   const bundle = emptyBundle();
@@ -39,7 +37,6 @@ export async function parseGainsWorkbook(
       sheet,
       spec,
       maps,
-      corrections,
       bundle,
       peopleByNumber,
       pinKeys,
@@ -53,12 +50,11 @@ function parseGainsSheet(args: {
   sheet: ExcelJS.Worksheet;
   spec: (typeof gainsSheetSpecs)[number];
   maps: ReferenceMaps;
-  corrections: IdentityCorrection[];
   bundle: ImportBundle;
   peopleByNumber: Map<string, string>;
   pinKeys: Set<string>;
 }) {
-  const { sheet, spec, maps, corrections, bundle, peopleByNumber, pinKeys } = args;
+  const { sheet, spec, maps, bundle, peopleByNumber, pinKeys } = args;
   const cols = columnCount(sheet);
   const rows = rowCount(sheet);
   const eventRow = findLabeledRow(sheet, "event");
@@ -128,13 +124,12 @@ function parseGainsSheet(args: {
       continue;
     }
 
-    const membershipNumber = applyIdentityCorrection(sheetMembership, archerName, corrections);
     const cleaned = cleanArcherName(archerName);
     const fullName = cleaned.fullName || archerName;
     const personId = registerPerson(
       bundle,
       peopleByNumber,
-      membershipNumber,
+      sheetMembership,
       fullName,
       cleaned.note,
     );
@@ -162,7 +157,7 @@ function parseGainsSheet(args: {
       });
       bundle.entries.push({
         submissionId,
-        membershipNumber,
+        membershipNumber: sheetMembership,
         archerName: fullName,
         classCode: parsedClass.code,
         bowStyleId,

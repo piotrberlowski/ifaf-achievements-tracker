@@ -35,7 +35,7 @@ Expert and International have records and cutoffs, and no GAINS score cells in t
 | Workbook fact | What the system stores |
 | --- | --- |
 | One row per membership number and class code | A person has many class careers. Awards stay on the class that was shot. |
-| 79 numbers have more than one spelling; 32 have more than one surname | A new surname with the same given name is a former name. Two given names on one number are two archers. The workbook writes `IRE_` in front of the membership number; the stored number does not. Una Dempsey keeps `17010`. David Dempsey is `17011`; the SBG rows filed as `17010` under his name move to `17011`. |
+| 79 numbers have more than one spelling; 32 have more than one surname | A new surname with the same given name is a former name. Two given names on one number are two archers, so the workbook has one number per archer before import. The workbook writes `IRE_` in front of the membership number; the stored number does not. |
 | Tracker cells such as `GOLD,g,g` and `b` | The membership secretary’s note of pins already handed out. A pin on that list is not handed out again in the same class and track. |
 | Lower case is a qualifying score; capitals are a pin | Persist the band and the pin. One gold-band score is not yet a Gold award. |
 | RIP, LEGEND, and quoted nicknames sit in the name cell | Official name is separate from a note. |
@@ -47,7 +47,7 @@ The award key is **person + age division + gender + bow style + award track**. A
 
 | Entity | Holds | Written by |
 | --- | --- | --- |
-| Person, PersonName | Membership number is unique per person after rectification. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import, identity corrections, and a secretary name change |
+| Person, PersonName | Membership number is unique per person. The official name is one full-name string, the latest approved name. Each earlier name is kept the same way, with who approved the change and when | Import and a secretary name change |
 | BowStyle | 12 styles | Seed |
 | AgeDivision | Cub, Junior, Young Adult, Adult, Veteran, Senior. The written prefix is this code plus `M` or `F`, and the longest age code wins (`YA` before `A`) | Seed |
 | Round, AwardTrack | 11 live rounds plus archived SBG, each round on one of Indoor, Animal, or Field | Seed |
@@ -238,7 +238,7 @@ Idempotent seed for 12 styles, 6 age divisions, 12 rounds, and the three award t
 
 ### 5. Import the workbooks
 
-`scripts/import-ifaf.ts` using exceljs, then `identity-corrections.csv`. Load 7,746 numeric scores as already-approved history and 853 standing records. A standing record that is not already one of those scores becomes its own competition and one score, even when the event was external and only that archer is known. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. A record-only event has `countsForGains` false. Pins already handed out are stored as `issued`. A surname change with the same given name stays one person. Two given names on one number are split. The first correction is: SBG scores filed as `17010` Dempsey David move to `17011`; Una Dempsey keeps `17010`. Done when a fresh import matches those counts, David’s SBG scores are on `17011`, Una’s scores remain on `17010`, and a second run does not duplicate scores.
+`scripts/import-ifaf.ts` using exceljs. Load 7,746 numeric scores as already-approved history and 853 standing records. A standing record that is not already one of those scores becomes its own competition and one score, even when the event was external and only that archer is known. Keep the competition name and leave its date empty when there is no calendar day. A multi-day meet is one competition per day. A record-only event has `countsForGains` false. Pins already handed out are stored as `issued`. A surname change with the same given name stays one person. The membership number is the one in the workbook. Done when a fresh import matches those counts and a second run does not duplicate scores.
 
 ### 6. GAINS engine
 

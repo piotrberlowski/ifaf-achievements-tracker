@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import ExcelJS from "exceljs";
-import { applyIdentityCorrection, parseIdentityCorrectionsCsv } from "./corrections.ts";
 import { parseGainsWorkbook } from "./gains-workbook.ts";
 import { codeForId, referenceMapsFromCatalog } from "./reference.ts";
 
@@ -35,11 +34,8 @@ function addGainsSheet(
 }
 
 describe("parseGainsWorkbook", () => {
-  it("loads numeric scores and issued pins, and applies csv identity corrections", async () => {
+  it("loads numeric scores and issued pins from the membership number on the sheet", async () => {
     const maps = referenceMapsFromCatalog();
-    const corrections = parseIdentityCorrectionsCsv(`sourceMembershipNumber,sourceFullName,targetMembershipNumber,reason
-17010,Dempsey David,17011,SBG scores filed under Una Dempsey's number
-`);
     const buffer = await workbookBuffer((workbook) => {
       const indoor = addGainsSheet(workbook, "Gains Indoor", "F", [
         { col: "D", event: "Craigavon AC", date: 45326, round: "Flint" },
@@ -58,14 +54,14 @@ describe("parseGainsWorkbook", () => {
       const sbg = addGainsSheet(workbook, "Gains SBG Round", "K", [
         { col: "D", event: "Wexford Archery", date: 44815, round: "SBG" },
       ]);
-      sbg.getCell("A5").value = "IRE_17010";
+      sbg.getCell("A5").value = "IRE_17011";
       sbg.getCell("B5").value = "Dempsey David";
       sbg.getCell("C5").value = "AMBU";
       sbg.getCell("D5").value = 610;
       sbg.getCell("K5").value = "GOLD";
     });
 
-    const parsed = await parseGainsWorkbook(buffer, maps, corrections);
+    const parsed = await parseGainsWorkbook(buffer, maps);
     assert.equal(parsed.scores.length, 3);
     const una = parsed.people.find((person) => person.membershipNumber === "17010");
     const david = parsed.people.find((person) => person.membershipNumber === "17011");
@@ -80,6 +76,7 @@ describe("parseGainsWorkbook", () => {
     assert.equal(davidScores[0].ageDivisionId, maps.ageDivisionId.get("A"));
     const davidEntry = parsed.entries.find((entry) => entry.scoreId === davidScores[0].id);
     assert.equal(davidEntry?.classCode, "AMBU");
+    assert.equal(davidEntry?.membershipNumber, "17011");
     assert.deepEqual(
       parsed.awards
         .map((award) => {
@@ -91,6 +88,5 @@ describe("parseGainsWorkbook", () => {
         .sort(),
       ["17010:INDOOR:gold", "17011:ANIMAL:gold"],
     );
-    assert.equal(applyIdentityCorrection("17010", "Dempsey David", corrections), "17011");
   });
 });
