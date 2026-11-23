@@ -55,14 +55,14 @@ export default function Home() {
         <dl className="grid gap-4 sm:grid-cols-3">
           {stats.map(({ icon: Icon, label, value }) => (
             <div
-              className="stat rounded-2xl border border-base-300 bg-base-100 shadow-sm"
+              className="stat rounded-2xl border border-secondary-content/15 bg-secondary text-secondary-content shadow-sm"
               key={label}
             >
-              <div className="stat-figure text-primary">
+              <div className="stat-figure text-secondary-content">
                 <Icon aria-hidden="true" className="size-8" />
               </div>
-              <dt className="stat-title">{label}</dt>
-              <dd className="stat-value text-primary">
+              <dt className="stat-title text-secondary-content/70">{label}</dt>
+              <dd className="stat-value text-secondary-content">
                 {value.toLocaleString("en-IE")}
               </dd>
             </div>
@@ -72,27 +72,27 @@ export default function Home() {
 
       <section aria-labelledby="explore-achievements">
         <div className="mb-6 max-w-2xl">
-          <p className="text-sm font-semibold tracking-wider text-primary uppercase">
+          <p className="text-sm font-semibold tracking-wider text-accent uppercase">
             Explore
           </p>
           <h2 className="mt-2 text-3xl font-bold" id="explore-achievements">
             Records and GAINS
           </h2>
-          <p className="mt-3 text-base-content/70">
+          <p className="mt-3 text-base-content/80">
             Open a section to learn how each achievement works.
           </p>
         </div>
 
         <div className="flex flex-col gap-4">
           <details
-            className="collapse-arrow collapse rounded-2xl border border-base-300 bg-base-100 shadow-sm"
+            className="collapse-arrow collapse rounded-2xl border border-secondary-content/15 bg-secondary text-secondary-content shadow-sm"
             name="achievements"
           >
-            <summary className="collapse-title text-xl font-semibold">
+            <summary className="collapse-title text-xl font-semibold transition-colors hover:bg-secondary-content/10">
               IFAF records
             </summary>
             <div className="collapse-content">
-              <div className="max-w-3xl space-y-4 text-base leading-7 text-base-content/80">
+              <div className="max-w-3xl space-y-4 text-base leading-7 text-secondary-content/85">
                 <p>
                   IFAF records recognise the highest approved score shot in
                   every IFAA round type. Records are held within each shooting
@@ -113,14 +113,14 @@ export default function Home() {
           </details>
 
           <details
-            className="collapse-arrow collapse rounded-2xl border border-base-300 bg-base-100 shadow-sm"
+            className="collapse-arrow collapse rounded-2xl border border-secondary-content/15 bg-secondary text-secondary-content shadow-sm"
             name="achievements"
           >
-            <summary className="collapse-title text-xl font-semibold">
+            <summary className="collapse-title text-xl font-semibold transition-colors hover:bg-secondary-content/10">
               GAINS awards
             </summary>
             <div className="collapse-content">
-              <div className="max-w-3xl space-y-4 text-base leading-7 text-base-content/80">
+              <div className="max-w-3xl space-y-4 text-base leading-7 text-secondary-content/85">
                 <p>
                   GAINS awards are a celebration of your progress as an archer.
                   They challenge you to measure your scores against the best
