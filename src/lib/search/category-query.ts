@@ -222,8 +222,8 @@ function allowsMany(options: CategoryQueryOptions | undefined, field: CategoryFi
   return options?.multiple?.includes(field) ?? false;
 }
 
-const bowRank = new Map(bowStyles.map((style, index) => [style.code, index]));
-const ageRank = new Map(ageDivisions.map((division, index) => [division.code, index]));
+const bowRank = new Map<string, number>(bowStyles.map((style, index) => [style.code, index]));
+const ageRank = new Map<string, number>(ageDivisions.map((division, index) => [division.code, index]));
 
 function canonicalize(field: CategoryFilterField, input: string): string | null {
   if (field === "gender") {
