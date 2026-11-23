@@ -31,7 +31,7 @@ export default async function Navigation({ className }: { className?: string }) 
     <div className={`navbar bg-neutral ${className ?? ""}`}>
       <div className="navbar-start text-neutral-content">
         <div className="dropdown">
-          <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
+          <div tabIndex={0} role="button" className="btn btn-ghost ifaf-bar-control lg:hidden">
             <Bars3CenterLeftIcon className="h-4 w-4" />
           </div>
           <ul
@@ -41,7 +41,7 @@ export default async function Navigation({ className }: { className?: string }) 
             {links}
           </ul>
         </div>
-        <Link className="btn btn-ghost text-sm" href="/">
+        <Link className="btn btn-ghost ifaf-bar-control text-sm" href="/">
           IFAF
           <span className="m-0 hidden p-0 lg:inline"> Achievements</span>
         </Link>
@@ -55,7 +55,7 @@ export default async function Navigation({ className }: { className?: string }) 
         {authenticated ? (
           <Account isAdmin={showPermissions} name={session?.user.name} />
         ) : (
-          <Link className="btn btn-ghost btn-sm" href="/login">
+          <Link className="btn btn-ghost ifaf-bar-control btn-sm" href="/login">
             Sign In
           </Link>
         )}

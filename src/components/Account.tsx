@@ -15,7 +15,7 @@ export default function Account({
 
   return (
     <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className="btn btn-ghost btn-sm">
+      <div tabIndex={0} role="button" className="btn btn-ghost ifaf-bar-control btn-sm">
         {name || "Unauthenticated"}
       </div>
       <ul
