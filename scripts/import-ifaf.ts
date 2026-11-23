@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
-import { parseIdentityCorrectionsCsv } from "../src/lib/import/corrections.ts";
+import {
+  parseIdentityCorrectionsCsv,
+  unappliedCorrections,
+} from "../src/lib/import/corrections.ts";
 import { parseGainsWorkbook } from "../src/lib/import/gains-workbook.ts";
 import {
   loadIfafImport,
@@ -58,22 +61,12 @@ async function main() {
 
   const summary = await loadIfafImport(prisma, bundle);
 
+  const leftoverCorrections = unappliedCorrections(corrections, bundle.entries);
   const issued = await readIssuedPins(prisma);
   const sheetKeys = new Set(pinKeysFromBundle(bundle, maps).map(pinIdentity));
   const dbKeys = new Set(issued.map(pinIdentity));
   const missing = [...sheetKeys].filter((key) => !dbKeys.has(key)).sort();
   const extra = [...dbKeys].filter((key) => !sheetKeys.has(key)).sort();
-
-  const una = await prisma.score.findMany({
-    where: { person: { membershipNumber: "IRE_17010" } },
-    include: { person: { include: { names: true } }, competition: true },
-  });
-  const david = await prisma.score.findMany({
-    where: { person: { membershipNumber: "IRE_17011" } },
-    include: { competition: true },
-  });
-  const sbgOnUna = una.filter((row) => row.competition.roundCode === "SBG");
-  const davidSbg = david.filter((row) => row.competition.roundCode === "SBG");
 
   const standing = await prisma.recordStanding.count();
   const gainsScores = await prisma.score.count({
@@ -106,10 +99,9 @@ async function main() {
           missing,
           extra,
         },
-        dempsey: {
-          unaScoreCount: una.length,
-          sbgScoresOnUna: sbgOnUna.length,
-          davidSbgScores: davidSbg.length,
+        identityCorrections: {
+          applied: corrections.length - leftoverCorrections.length,
+          leftover: leftoverCorrections,
         },
       },
       null,
@@ -126,7 +118,7 @@ async function main() {
   if (missing.length > 0 || extra.length > 0) {
     process.exitCode = 1;
   }
-  if (sbgOnUna.length > 0 || davidSbg.length === 0) {
+  if (leftoverCorrections.length > 0) {
     process.exitCode = 1;
   }
 }
