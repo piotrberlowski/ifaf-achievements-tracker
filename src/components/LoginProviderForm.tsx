@@ -16,6 +16,7 @@ function ProviderButton({
 
   return (
     <form
+      className="w-full"
       action={async () => {
         await authClient.signIn.social({
           provider: providerId,
@@ -23,15 +24,19 @@ function ProviderButton({
         });
       }}
     >
-      <button className="btn btn-ghost btn-sm" type="submit">
-        Sign in with {providerName}
+      <button
+        className="btn w-full gap-3 border-base-100 bg-base-100 text-base-content hover:border-accent hover:bg-accent hover:text-accent-content"
+        type="submit"
+      >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           alt=""
-          height={24}
+          className="size-4 shrink-0"
+          height={16}
           src={`${PROVIDER_IMG_PATH}/${providerId}.svg`}
-          width={24}
+          width={16}
         />
+        <span>Sign in with {providerName}</span>
       </button>
     </form>
   );
@@ -52,7 +57,7 @@ export default function LoginProviderForm({
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full flex-col gap-3">
       {providers.map((provider) => (
         <ProviderButton
           key={provider.id}

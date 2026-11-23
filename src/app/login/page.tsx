@@ -1,5 +1,10 @@
 import LoginProviderForm from "@/components/LoginProviderForm";
+import type { Metadata } from "next";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Sign in",
+};
 
 export default function LoginPage() {
   const providers = [
@@ -11,29 +16,22 @@ export default function LoginPage() {
   ].filter((provider) => !!provider);
 
   return (
-    <div className="hero h-full bg-base-100">
-      <div className="hero-content flex-col rounded-lg bg-neutral lg:flex-row-reverse">
-        <div className="text-center text-neutral-content lg:text-left">
-          <h1 className="text-3xl font-bold xl:text-4xl">IFAF achievements</h1>
-          <div className="my-3 flex flex-col gap-3">
-            <p>
-              Records and GAINS awards for the Irish Field Archery Federation.
+    <div className="flex min-h-[calc(100dvh-5rem)] items-start justify-center px-4 py-12 sm:items-center sm:py-16">
+      <section className="card w-full max-w-md border border-secondary-content/15 bg-secondary text-secondary-content shadow-xl">
+        <div className="card-body gap-7 p-7 sm:p-9">
+          <div className="text-center">
+            <p className="whitespace-nowrap text-sm font-semibold tracking-[0.16em] text-secondary-content/70 uppercase">
+              IFAF Achievements
             </p>
-            <p>Sign in to claim a membership number or to administer the system.</p>
-            <p>
-              To use a <span className="font-bold">username and password</span>,
-              choose Auth0.
-            </p>
+            <h1 className="mt-2 text-3xl font-bold">Sign in</h1>
           </div>
-        </div>
-        <div className="card w-full max-w-sm shrink-0 bg-base-100 text-primary-content shadow-2xl">
-          <div className="card-body">
+          <div>
             <Suspense>
               <LoginProviderForm providers={providers} />
             </Suspense>
           </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

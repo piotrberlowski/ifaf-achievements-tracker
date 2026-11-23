@@ -13,6 +13,12 @@ export default async function Navigation({ className }: { className?: string }) 
       <li>
         <Link href="/">Home</Link>
       </li>
+      <li>
+        <Link href="/records">Records</Link>
+      </li>
+      <li>
+        <Link href="/gains">GAINS</Link>
+      </li>
       {showPermissions && (
         <li>
           <Link href="/admin">Permissions</Link>
@@ -23,14 +29,14 @@ export default async function Navigation({ className }: { className?: string }) 
 
   return (
     <div className={`navbar bg-neutral ${className ?? ""}`}>
-      <div className="navbar-start text-accent">
+      <div className="navbar-start text-neutral-content">
         <div className="dropdown">
           <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
             <Bars3CenterLeftIcon className="h-4 w-4" />
           </div>
           <ul
             tabIndex={0}
-            className="menu dropdown-content z-[1] mt-3 w-52 rounded-box bg-base-300 p-2 shadow menu-sm"
+            className="menu dropdown-content z-[1] mt-3 w-52 rounded-box bg-base-300 p-2 text-base-content shadow menu-sm"
           >
             {links}
           </ul>
@@ -41,11 +47,11 @@ export default async function Navigation({ className }: { className?: string }) 
         </Link>
       </div>
       <div className="navbar-center hidden lg:flex">
-        <ul className="menu menu-horizontal rounded-box bg-base-300 px-1">
+        <ul className="menu menu-horizontal rounded-box bg-neutral-content/10 px-1 text-neutral-content">
           {links}
         </ul>
       </div>
-      <div className="navbar-end text-accent">
+      <div className="navbar-end text-neutral-content">
         {authenticated ? (
           <Account isAdmin={showPermissions} name={session?.user.name} />
         ) : (

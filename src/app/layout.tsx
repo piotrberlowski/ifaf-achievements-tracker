@@ -3,7 +3,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "IFAF achievements",
+  title: {
+    default: "IFAF achievements",
+    template: "%s | IFAF achievements",
+  },
   description: "Records and GAINS awards for the Irish Field Archery Federation.",
 };
 
@@ -14,11 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="relative flex h-dvh w-full flex-col px-2">
+      <body className="relative flex min-h-dvh w-full flex-col px-2">
         <div className="flex flex-none">
           <Navigation className="flex-1" />
         </div>
-        <main className="relative mx-auto h-full w-full items-center bg-base-100 align-top lg:w-5/6 xl:w-3/4">
+        <main className="relative mx-auto w-full flex-1 items-center bg-base-100 align-top lg:w-5/6 xl:w-3/4">
           {children}
         </main>
       </body>
