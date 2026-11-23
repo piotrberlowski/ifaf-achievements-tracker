@@ -57,20 +57,27 @@ describe("parseClassCode", () => {
     });
   });
 
-  it("normalises AMTR(IFAF) to AMTR", () => {
-    assert.deepEqual(parseClassCode("AMTR(IFAF)"), parseClassCode("AMTR"));
+  it("parses AMTR(IFAF) as archived Irish Traditional Recurve", () => {
+    assert.deepEqual(parseClassCode("AMTR(IFAF)"), {
+      code: "AMTR(IFAF)",
+      ageDivisionCode: "A",
+      ageDivisionName: "Adult",
+      gender: "male",
+      bowStyleCode: "TR_ARCHIVED",
+      bowStyleName: "Irish Traditional Recurve, archived",
+    });
   });
 });
 
 describe("reference catalog", () => {
-  it("has 12 styles, 6 age divisions, 2 genders, and 144 written class codes", () => {
-    assert.equal(bowStyles.length, 12);
+  it("has 13 styles, 6 age divisions, 2 genders, and 156 written class codes", () => {
+    assert.equal(bowStyles.length, 13);
     assert.equal(ageDivisions.length, 6);
     assert.equal(genders.length, 2);
-    assert.equal(classCodes.length, 144);
+    assert.equal(classCodes.length, 156);
     assert.equal(rounds.length, 12);
     assert.equal(awardTracks.length, 3);
-    assert.equal(new Set(classCodes.map((row) => row.code)).size, 144);
+    assert.equal(new Set(classCodes.map((row) => row.code)).size, 156);
   });
 
   it("points every round at Indoor, Animal, or Field", () => {

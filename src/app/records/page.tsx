@@ -1,37 +1,114 @@
+import CategoryFilter from "@/components/CategoryFilter";
+import { RecordResults } from "@/components/records/RecordResults";
+import type { AgeDivisionCode, AwardTrackCode, BowStyleCode } from "@/lib/class-filter";
+import { ageDivisions, bowStyles } from "@/lib/reference/catalog";
+import { findStandingRecords } from "@/lib/records/standings";
+import {
+  categoryHref,
+  parseCategoryQuery,
+  shouldRedirectCategoryQuery,
+  type CategoryFilterField,
+  type CategoryQueryOptions,
+  type SearchParams,
+} from "@/lib/search/category-query";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "IFAF records",
   description:
-    "Explore Irish Field Archery Federation records by round and shooting class.",
+    "Find Irish Field Archery Federation records by discipline and bow style.",
 };
 
-export default function RecordsPage() {
+const recordFields = ["discipline", "bow", "age", "gender"] as const satisfies readonly CategoryFilterField[];
+const recordQuery: CategoryQueryOptions = { multiple: ["bow", "age"] };
+
+export default async function RecordsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const parsed = parseCategoryQuery(params, recordFields, recordQuery);
+  if (shouldRedirectCategoryQuery(params, parsed, recordFields, recordQuery)) {
+    redirect(categoryHref("/records", parsed, recordFields, recordQuery));
+  }
+
+  const discipline = asDiscipline(parsed.discipline);
+  const bows = asBows(parsed.bows);
+  const records =
+    discipline && bows.length > 0 && parsed.errors.length === 0
+      ? await findStandingRecords({
+          discipline,
+          bow: bows,
+          age: asAges(parsed.ages),
+          gender: parsed.gender,
+        })
+      : null;
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
       <Link className="link inline-flex items-center gap-2 self-start" href="/">
         <ArrowLeftIcon aria-hidden="true" className="size-4" />
         Back to achievements
       </Link>
 
       <section className="rounded-3xl bg-neutral px-6 py-10 text-neutral-content shadow-xl sm:px-10">
-        <span className="badge badge-accent mb-5">Preview</span>
         <h1 className="text-4xl font-bold sm:text-5xl">IFAF records</h1>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content/80">
-          Discover the highest approved scores for every IFAA round type and
-          shooting class.
+        <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content">
+          Find standing records for a discipline and the bow styles you pick. Age
+          groups and gender narrow the class.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm sm:p-8">
-        <h2 className="text-2xl font-bold">Record explorer coming soon</h2>
-        <p className="mt-3 max-w-2xl leading-7 text-base-content/70">
-          This page will let you filter records by round, age division, gender,
-          and bow style, then see the record score, holder, and date achieved.
-        </p>
-      </section>
+      {parsed.errors.length > 0 ? (
+        <div className="rounded-2xl border border-error/40 bg-error/10 px-4 py-3 text-sm" role="alert">
+          <ul className="list-disc pl-5">
+            {parsed.errors.map((error) => (
+              <li key={error.field}>{error.message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <CategoryFilter
+        action="/records"
+        fields={recordFields}
+        formKey={categoryHref("/records", parsed, recordFields, recordQuery)}
+        idPrefix="records"
+        legend="Find records"
+        multiple={recordQuery.multiple}
+        required={["discipline", "bow"]}
+        submitLabel="Show records"
+        values={parsed}
+      />
+      <RecordResults
+        filter={{
+          discipline,
+          bows,
+          ages: asAges(parsed.ages),
+          gender: parsed.gender,
+        }}
+        records={records}
+      />
     </div>
   );
+}
+
+function asDiscipline(value: string | null): AwardTrackCode | null {
+  if (value === "INDOOR" || value === "ANIMAL" || value === "FIELD") return value;
+  return null;
+}
+
+const bowCodes = new Set<string>(bowStyles.map((style) => style.code));
+const ageCodes = new Set<string>(ageDivisions.map((division) => division.code));
+
+function asBows(values: string[]): BowStyleCode[] {
+  return values.filter((value): value is BowStyleCode => bowCodes.has(value));
+}
+
+function asAges(values: string[]): AgeDivisionCode[] {
+  return values.filter((value): value is AgeDivisionCode => ageCodes.has(value));
 }

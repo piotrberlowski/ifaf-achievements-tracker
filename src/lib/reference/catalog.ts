@@ -17,6 +17,7 @@ export const bowStyles = [
   { code: "LB", name: "Longbow" },
   { code: "HB", name: "Historical Bow" },
   { code: "TR", name: "Traditional Recurve" },
+  { code: "TR_ARCHIVED", name: "Irish Traditional Recurve, archived" },
 ] as const;
 
 export const ageDivisions = [
