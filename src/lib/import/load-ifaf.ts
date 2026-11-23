@@ -1,18 +1,7 @@
-import { randomUUID } from "node:crypto";
-import type { PrismaClient } from "@prisma/client";
-import type {
-  ImportCompetition,
-  ImportPerson,
-  ImportPin,
-  ImportScore,
-} from "./types.ts";
-
-export type PreparedImport = {
-  people: ImportPerson[];
-  competitions: ImportCompetition[];
-  scores: ImportScore[];
-  pins: ImportPin[];
-};
+import type { Prisma, PrismaClient } from "@prisma/client";
+import type { ImportBundle } from "./bundle.ts";
+import { codeForId } from "./reference.ts";
+import type { ReferenceMaps } from "./reference.ts";
 
 export type ImportSummary = {
   people: number;
@@ -24,118 +13,117 @@ export type ImportSummary = {
   pinsSkipped: number;
 };
 
-type ReferenceIds = {
-  bowStyle: Map<string, string>;
-  ageDivision: Map<string, string>;
-  awardTrack: Map<string, string>;
-  round: Map<string, { id: string; code: string }>;
-};
-
 export async function loadIfafImport(
   prisma: PrismaClient,
-  data: PreparedImport,
+  bundle: ImportBundle,
 ): Promise<ImportSummary> {
-  const reference = await loadReference(prisma);
   const approvedById = await upsertApprover(prisma);
-  const personIds = await upsertPeople(prisma, data.people, approvedById);
-  const competitionState = await upsertCompetitions(prisma, data.competitions, reference);
+  const personRewrite = await insertPeople(prisma, bundle, approvedById);
 
-  const scoresToInsert = data.scores.filter(
-    (score) => competitionState.created.has(score.competitionExternalId),
+  const scores = bundle.scores.map((score) => ({
+    ...score,
+    personId: personRewrite.get(score.personId) ?? score.personId,
+  }));
+  const awards = bundle.awards.map((award) => ({
+    ...award,
+    personId: personRewrite.get(award.personId) ?? award.personId,
+  }));
+
+  const competitionState = await insertCompetitions(prisma, bundle);
+  const scoresToInsert = scores.filter(
+    (score) => !competitionState.skipOriginalCompetitionIds.has(score.competitionId),
   );
-  const skippedExisting = data.scores.length - scoresToInsert.length;
+  const entriesToInsert = bundle.entries.filter(
+    (entry) => !competitionState.skipOriginalSubmissionIds.has(entry.submissionId),
+  );
 
-  await insertScoresAndEntries(prisma, scoresToInsert, personIds, competitionState, reference);
-  await approveNewSubmissions(prisma, competitionState.createdSubmissionIds, approvedById);
+  await insertScoresAndEntries(
+    prisma,
+    scoresToInsert.map((score) => ({
+      ...score,
+      competitionId: competitionState.competitionRewrite.get(score.competitionId) ?? score.competitionId,
+    })),
+    entriesToInsert.map((entry) => ({
+      ...entry,
+      submissionId: competitionState.submissionRewrite.get(entry.submissionId) ?? entry.submissionId,
+    })),
+  );
+  await approveNewSubmissions(prisma, competitionState.submissionIdsToApprove, approvedById);
 
-  const pinResult = await upsertPins(prisma, data.pins, personIds, reference);
+  const pinResult = await insertAwards(prisma, awards);
 
   await prisma.$executeRaw`REFRESH MATERIALIZED VIEW CONCURRENTLY "record_standing"`;
 
   return {
-    people: personIds.size,
-    competitionsCreated: competitionState.created.size,
-    competitionsReused: competitionState.reused.size,
+    people: personRewrite.size,
+    competitionsCreated: competitionState.created,
+    competitionsReused: competitionState.reused,
     scoresCreated: scoresToInsert.length,
-    scoresSkipped: skippedExisting,
+    scoresSkipped: scores.length - scoresToInsert.length,
     pinsCreated: pinResult.created,
     pinsSkipped: pinResult.skipped,
   };
 }
 
-async function loadReference(prisma: PrismaClient): Promise<ReferenceIds> {
-  const [styles, divisions, tracks, rounds] = await Promise.all([
-    prisma.bowStyle.findMany(),
-    prisma.ageDivision.findMany(),
-    prisma.awardTrack.findMany(),
-    prisma.round.findMany({ select: { id: true, code: true } }),
-  ]);
-  if (styles.length === 0 || divisions.length === 0 || tracks.length === 0 || rounds.length === 0) {
-    throw new Error("Reference seed has not been loaded. Run pnpm db:seed first.");
-  }
-  return {
-    bowStyle: new Map(styles.map((row) => [row.code, row.id])),
-    ageDivision: new Map(divisions.map((row) => [row.code, row.id])),
-    awardTrack: new Map(tracks.map((row) => [row.code, row.id])),
-    round: new Map(rounds.map((row) => [row.code, row])),
-  };
-}
-
-async function upsertPeople(
+async function insertPeople(
   prisma: PrismaClient,
-  people: ImportPerson[],
+  bundle: ImportBundle,
   approvedById: string,
 ): Promise<Map<string, string>> {
-  const ids = new Map<string, string>();
-  for (const person of people) {
-    const row = await prisma.person.upsert({
-      where: { membershipNumber: person.membershipNumber },
-      create: { membershipNumber: person.membershipNumber },
-      update: {},
-      include: { names: true },
-    });
-    ids.set(person.membershipNumber, row.id);
-    await prisma.personName.updateMany({
-      where: { personId: row.id, approvedById: null },
-      data: { approvedById, approvedAt: new Date() },
-    });
-    const already = new Set(row.names.map((name) => name.fullName));
-    for (const name of person.names) {
-      if (already.has(name.fullName)) {
-        continue;
-      }
-      already.add(name.fullName);
-      await prisma.personName.create({
-        data: {
-          personId: row.id,
-          fullName: name.fullName,
-          note: name.note,
-          approvedById,
-          approvedAt: new Date(),
-        },
-      });
+  const existing = await prisma.person.findMany({
+    select: { id: true, membershipNumber: true },
+  });
+  const membershipToId = new Map(existing.map((row) => [row.membershipNumber, row.id]));
+  const rewrite = new Map<string, string>();
+  const toInsert: Prisma.PersonCreateManyInput[] = [];
+
+  for (const person of bundle.people) {
+    const parsedId = person.id;
+    if (!parsedId) {
+      throw new Error(`Person ${person.membershipNumber} is missing an id`);
     }
+    const existingId = membershipToId.get(person.membershipNumber);
+    if (existingId) {
+      rewrite.set(parsedId, existingId);
+      continue;
+    }
+    rewrite.set(parsedId, parsedId);
+    membershipToId.set(person.membershipNumber, parsedId);
+    toInsert.push(person);
   }
-  return ids;
+
+  await createManyInBatches(toInsert, 500, (data) => prisma.person.createMany({ data }));
+
+  const names = bundle.names.map((name) => ({
+    ...name,
+    personId: rewrite.get(name.personId) ?? name.personId,
+    approvedById,
+    approvedAt: new Date(),
+  }));
+  const existingNames = await prisma.personName.findMany({
+    select: { personId: true, fullName: true },
+  });
+  const already = new Set(existingNames.map((name) => `${name.personId}|${name.fullName}`));
+  const namesToInsert = names.filter((name) => !already.has(`${name.personId}|${name.fullName}`));
+  await createManyInBatches(namesToInsert, 400, (data) => prisma.personName.createMany({ data }));
+
+  return rewrite;
 }
 
-const APPROVER_NAME = "Membership Secretary";
-const APPROVER_EMAIL = "membersec@ifaf.ie";
-const APPROVER_ID = "membership-secretary";
-const LEGACY_IMPORT_USER_ID = "ifaf-workbook-import";
-
-type CompetitionState = {
-  created: Map<string, { competitionId: string; submissionId: string }>;
-  reused: Map<string, { competitionId: string; submissionId: string }>;
-  createdSubmissionIds: string[];
-  byExternalId: Map<string, { competitionId: string; submissionId: string }>;
+type CompetitionInsertState = {
+  created: number;
+  reused: number;
+  competitionRewrite: Map<string, string>;
+  submissionRewrite: Map<string, string>;
+  skipOriginalCompetitionIds: Set<string>;
+  skipOriginalSubmissionIds: Set<string>;
+  submissionIdsToApprove: string[];
 };
 
-async function upsertCompetitions(
+async function insertCompetitions(
   prisma: PrismaClient,
-  competitions: ImportCompetition[],
-  reference: ReferenceIds,
-): Promise<CompetitionState> {
+  bundle: ImportBundle,
+): Promise<CompetitionInsertState> {
   const existing = await prisma.scoreSubmission.findMany({
     where: { source: "import", externalId: { not: null } },
     select: { id: true, externalId: true, competitionId: true, status: true },
@@ -145,76 +133,92 @@ async function upsertCompetitions(
       .filter((row) => row.externalId)
       .map((row) => [row.externalId as string, row]),
   );
+  const scoredCompetitions = new Set(
+    (
+      await prisma.score.findMany({
+        where: { competitionId: { in: [...new Set(existing.map((row) => row.competitionId))] } },
+        select: { competitionId: true },
+        distinct: ["competitionId"],
+      })
+    ).map((row) => row.competitionId),
+  );
 
-  const created = new Map<string, { competitionId: string; submissionId: string }>();
-  const reused = new Map<string, { competitionId: string; submissionId: string }>();
-  const createdSubmissionIds: string[] = [];
-  const byExternalId = new Map<string, { competitionId: string; submissionId: string }>();
+  const competitionById = new Map(
+    bundle.competitions.map((competition) => [competition.id, competition]),
+  );
+  const competitionsToInsert: Prisma.CompetitionCreateManyInput[] = [];
+  const submissionsToInsert: Prisma.ScoreSubmissionCreateManyInput[] = [];
+  const competitionRewrite = new Map<string, string>();
+  const submissionRewrite = new Map<string, string>();
+  const skipOriginalCompetitionIds = new Set<string>();
+  const skipOriginalSubmissionIds = new Set<string>();
+  const submissionIdsToApprove: string[] = [];
+  let created = 0;
+  let reused = 0;
 
-  for (const competition of competitions) {
-    const round = reference.round.get(competition.roundCode);
-    if (!round) {
-      throw new Error(`Unknown round ${competition.roundCode}`);
+  for (const submission of bundle.submissions) {
+    const competition = competitionById.get(submission.competitionId);
+    if (!competition) {
+      throw new Error(`Missing competition for submission ${submission.externalId}`);
     }
-    const found = existingByExternalId.get(competition.externalId);
+    const found = submission.externalId
+      ? existingByExternalId.get(submission.externalId)
+      : undefined;
     if (found) {
-      const ids = { competitionId: found.competitionId, submissionId: found.id };
-      byExternalId.set(competition.externalId, ids);
-      const scoreCount = await prisma.score.count({
-        where: { competitionId: found.competitionId },
-      });
-      if (scoreCount > 0) {
-        reused.set(competition.externalId, ids);
+      competitionRewrite.set(submission.competitionId, found.competitionId);
+      if (submission.id) {
+        submissionRewrite.set(submission.id, found.id);
+      }
+      if (scoredCompetitions.has(found.competitionId)) {
+        skipOriginalCompetitionIds.add(submission.competitionId);
+        skipOriginalSubmissionIds.add(submission.id ?? "");
+        reused += 1;
         if (found.status === "pending") {
-          createdSubmissionIds.push(found.id);
+          submissionIdsToApprove.push(found.id);
         }
         continue;
       }
       if (found.status !== "pending") {
-        reused.set(competition.externalId, ids);
+        skipOriginalCompetitionIds.add(submission.competitionId);
+        skipOriginalSubmissionIds.add(submission.id ?? "");
+        reused += 1;
         continue;
       }
-      created.set(competition.externalId, ids);
-      createdSubmissionIds.push(found.id);
+      submissionIdsToApprove.push(found.id);
+      created += 1;
       continue;
     }
 
-    const createdCompetition = await prisma.competition.create({
-      data: {
-        name: competition.name,
-        startsOn: competition.startsOn,
-        roundCode: competition.roundCode,
-        roundId: round.id,
-        countsForGains: competition.countsForGains,
-        submission: {
-          create: {
-            status: "pending",
-            source: "import",
-            externalId: competition.externalId,
-          },
-        },
-      },
-      include: { submission: true },
-    });
-    const submissionId = createdCompetition.submission?.id;
-    if (!submissionId) {
-      throw new Error(`Missing submission for ${competition.externalId}`);
+    competitionsToInsert.push(competition);
+    submissionsToInsert.push(submission);
+    if (submission.id) {
+      submissionIdsToApprove.push(submission.id);
     }
-    const ids = { competitionId: createdCompetition.id, submissionId };
-    created.set(competition.externalId, ids);
-    byExternalId.set(competition.externalId, ids);
-    createdSubmissionIds.push(submissionId);
+    created += 1;
   }
 
-  return { created, reused, createdSubmissionIds, byExternalId };
+  await createManyInBatches(competitionsToInsert, 200, (data) =>
+    prisma.competition.createMany({ data }),
+  );
+  await createManyInBatches(submissionsToInsert, 200, (data) =>
+    prisma.scoreSubmission.createMany({ data }),
+  );
+
+  return {
+    created,
+    reused,
+    competitionRewrite,
+    submissionRewrite,
+    skipOriginalCompetitionIds,
+    skipOriginalSubmissionIds,
+    submissionIdsToApprove,
+  };
 }
 
 async function insertScoresAndEntries(
   prisma: PrismaClient,
-  scores: ImportScore[],
-  personIds: Map<string, string>,
-  competitions: CompetitionState,
-  reference: ReferenceIds,
+  scores: Prisma.ScoreCreateManyInput[],
+  entries: Prisma.SubmissionEntryCreateManyInput[],
 ) {
   if (scores.length === 0) {
     return;
@@ -222,66 +226,17 @@ async function insertScoresAndEntries(
 
   await prisma.$executeRaw`ALTER TABLE "score" DISABLE TRIGGER score_refresh_record_standing`;
   try {
-    const scoreRows = scores.map((score) => {
-      const personId = personIds.get(score.membershipNumber);
-      const competition = competitions.byExternalId.get(score.competitionExternalId);
-      const bowStyleId = reference.bowStyle.get(score.bowStyleCode);
-      const ageDivisionId = reference.ageDivision.get(score.ageDivisionCode);
-      if (!personId || !competition || !bowStyleId || !ageDivisionId) {
-        throw new Error(
-          `Missing reference for score ${score.membershipNumber} ${score.classCode} ${score.competitionExternalId}`,
-        );
-      }
-      return {
-        id: randomUUID(),
-        personId,
-        bowStyleId,
-        ageDivisionId,
-        gender: score.gender,
-        competitionId: competition.competitionId,
-        score: score.score,
-        submissionId: competition.submissionId,
-        membershipNumber: score.membershipNumber,
-        archerName: score.archerName,
-        classCode: score.classCode,
-      };
-    });
-
-    await createManyInBatches(
-      scoreRows.map(
-        ({ id, personId, bowStyleId, ageDivisionId, gender, competitionId, score }) => ({
-          id,
-          personId,
-          bowStyleId,
-          ageDivisionId,
-          gender,
-          competitionId,
-          score,
-        }),
-      ),
-      500,
-      (data) => prisma.score.createMany({ data }),
-    );
-
-    await createManyInBatches(
-      scoreRows.map((row) => ({
-        submissionId: row.submissionId,
-        membershipNumber: row.membershipNumber,
-        archerName: row.archerName,
-        classCode: row.classCode,
-        bowStyleId: row.bowStyleId,
-        ageDivisionId: row.ageDivisionId,
-        gender: row.gender,
-        score: row.score,
-        scoreId: row.id,
-      })),
-      400,
-      (data) => prisma.submissionEntry.createMany({ data }),
-    );
+    await createManyInBatches(scores, 500, (data) => prisma.score.createMany({ data }));
+    await createManyInBatches(entries, 400, (data) => prisma.submissionEntry.createMany({ data }));
   } finally {
     await prisma.$executeRaw`ALTER TABLE "score" ENABLE TRIGGER score_refresh_record_standing`;
   }
 }
+
+const APPROVER_NAME = "Membership Secretary";
+const APPROVER_EMAIL = "membersec@ifaf.ie";
+const APPROVER_ID = "membership-secretary";
+const LEGACY_IMPORT_USER_ID = "ifaf-workbook-import";
 
 async function upsertApprover(prisma: PrismaClient): Promise<string> {
   const existing = await prisma.user.findFirst({
@@ -332,37 +287,17 @@ async function approveNewSubmissions(
   });
 }
 
-async function upsertPins(
+async function insertAwards(
   prisma: PrismaClient,
-  pins: ImportPin[],
-  personIds: Map<string, string>,
-  reference: ReferenceIds,
+  awards: Prisma.GainsAwardCreateManyInput[],
 ): Promise<{ created: number; skipped: number }> {
   const before = await prisma.gainsAward.count();
-  const rows = pins.map((pin) => {
-    const personId = personIds.get(pin.membershipNumber);
-    const bowStyleId = reference.bowStyle.get(pin.bowStyleCode);
-    const ageDivisionId = reference.ageDivision.get(pin.ageDivisionCode);
-    const awardTrackId = reference.awardTrack.get(pin.awardTrackCode);
-    if (!personId || !bowStyleId || !ageDivisionId || !awardTrackId) {
-      throw new Error(`Missing reference for pin ${pin.membershipNumber} ${pin.classCode} ${pin.level}`);
-    }
-    return {
-      personId,
-      bowStyleId,
-      ageDivisionId,
-      gender: pin.gender,
-      awardTrackId,
-      level: pin.level,
-      status: "issued" as const,
-    };
-  });
-  await createManyInBatches(rows, 400, (data) =>
+  await createManyInBatches(awards, 400, (data) =>
     prisma.gainsAward.createMany({ data, skipDuplicates: true }),
   );
   const after = await prisma.gainsAward.count();
   const created = after - before;
-  return { created, skipped: pins.length - created };
+  return { created, skipped: awards.length - created };
 }
 
 async function createManyInBatches<T>(
@@ -393,6 +328,20 @@ export function pinIdentity(pin: PinKey): string {
     pin.awardTrackCode,
     pin.level,
   ].join("|");
+}
+
+export function pinKeysFromBundle(bundle: ImportBundle, maps: ReferenceMaps): PinKey[] {
+  const membershipByPersonId = new Map(
+    bundle.people.map((person) => [person.id, person.membershipNumber]),
+  );
+  return bundle.awards.map((award) => ({
+    membershipNumber: membershipByPersonId.get(award.personId) ?? award.personId,
+    bowStyleCode: codeForId(maps.bowStyleId, award.bowStyleId, "bow style"),
+    ageDivisionCode: codeForId(maps.ageDivisionId, award.ageDivisionId, "age division"),
+    gender: award.gender,
+    awardTrackCode: codeForId(maps.awardTrackId, award.awardTrackId, "award track"),
+    level: award.level,
+  }));
 }
 
 export async function readIssuedPins(prisma: PrismaClient): Promise<PinKey[]> {

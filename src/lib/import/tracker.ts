@@ -1,10 +1,14 @@
-export const pinLevels = ["bronze", "silver", "gold", "hotshot", "star"] as const;
+import { AwardLevel } from "@prisma/client";
 
-export type PinLevel = (typeof pinLevels)[number];
+const PIN_TOKENS: Record<string, AwardLevel> = {
+  BRONZE: AwardLevel.bronze,
+  SILVER: AwardLevel.silver,
+  GOLD: AwardLevel.gold,
+  HOTSHOT: AwardLevel.hotshot,
+  STAR: AwardLevel.star,
+};
 
-const PIN_TOKENS = new Set<string>(["BRONZE", "SILVER", "GOLD", "HOTSHOT", "STAR"]);
-
-export function parseIssuedPins(cell: string | null | undefined): PinLevel[] {
+export function parseIssuedPins(cell: string | null | undefined): AwardLevel[] {
   if (!cell) {
     return [];
   }
@@ -15,21 +19,18 @@ export function parseIssuedPins(cell: string | null | undefined): PinLevel[] {
     .map((token) => token.trim())
     .filter(Boolean);
 
-  const levels: PinLevel[] = [];
-  const seen = new Set<string>();
+  const levels: AwardLevel[] = [];
+  const seen = new Set<AwardLevel>();
   for (const token of tokens) {
-    const upper = token.toUpperCase();
-    if (!PIN_TOKENS.has(upper)) {
-      continue;
-    }
     if (!/[A-Z]/.test(token)) {
       continue;
     }
-    if (seen.has(upper)) {
+    const level = PIN_TOKENS[token.toUpperCase()];
+    if (!level || seen.has(level)) {
       continue;
     }
-    seen.add(upper);
-    levels.push(upper.toLowerCase() as PinLevel);
+    seen.add(level);
+    levels.push(level);
   }
   return levels;
 }

@@ -1,3 +1,4 @@
+import { DivisionGender } from "@prisma/client";
 import { parseClassCode } from "../reference/parse-class-code.ts";
 
 export const gainsSheetSpecs = [
@@ -74,7 +75,7 @@ export function bowStyleCodeFromLabel(value: string): string | null {
 
 export function parseDivisionLabel(
   value: string,
-): { ageDivisionCode: string; gender: "male" | "female" } | null {
+): { ageDivisionCode: string; gender: DivisionGender } | null {
   const match = DIVISION_RE.exec(value.trim());
   if (!match) {
     return null;
@@ -85,7 +86,7 @@ export function parseDivisionLabel(
   }
   return {
     ageDivisionCode,
-    gender: match[2].toUpperCase() === "F" ? "female" : "male",
+    gender: match[2].toUpperCase() === "F" ? DivisionGender.female : DivisionGender.male,
   };
 }
 

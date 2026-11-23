@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import ExcelJS from "exceljs";
 import { parseRecordsWorkbook } from "./records-workbook.ts";
+import { referenceMapsFromCatalog } from "./reference.ts";
 
 describe("parseRecordsWorkbook", () => {
   it("reads a standing record including a labelled meet with no calendar day", async () => {
+    const maps = referenceMapsFromCatalog();
     const workbook = new ExcelJS.Workbook();
     const animal = workbook.addWorksheet("Animal rounds");
     animal.getCell("A1").value = "Division";
@@ -21,11 +23,11 @@ describe("parseRecordsWorkbook", () => {
     workbook.addWorksheet("Target Face Outdoor");
 
     const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
-    const parsed = await parseRecordsWorkbook(buffer);
+    const parsed = await parseRecordsWorkbook(buffer, maps);
     assert.equal(parsed.records.length, 1);
-    assert.equal(parsed.records[0].roundCode, "UAR");
-    assert.equal(parsed.records[0].bowStyleCode, "BB-R");
-    assert.equal(parsed.records[0].ageDivisionCode, "S");
+    assert.equal(parsed.records[0].roundId, maps.round.get("UAR")?.id);
+    assert.equal(parsed.records[0].bowStyleId, maps.bowStyleId.get("BB-R"));
+    assert.equal(parsed.records[0].ageDivisionId, maps.ageDivisionId.get("S"));
     assert.equal(parsed.records[0].gender, "male");
     assert.equal(parsed.records[0].score, 460);
     assert.equal(parsed.records[0].startsOn, null);

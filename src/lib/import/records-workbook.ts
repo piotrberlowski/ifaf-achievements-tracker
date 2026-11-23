@@ -1,3 +1,4 @@
+import { DivisionGender } from "@prisma/client";
 import type ExcelJS from "exceljs";
 import {
   cellScalar,
@@ -9,21 +10,27 @@ import {
 } from "./cells.ts";
 import { parseShotWhen } from "./dates.ts";
 import { bowStyleCodeFromLabel, parseDivisionLabel, roundCodeFromLabel } from "./labels.ts";
-import type { ParseWarning, StandingRecord } from "./types.ts";
+import { requiredId, requiredRound, type ReferenceMaps } from "./reference.ts";
 
 const RECORD_SHEETS = ["Animal rounds", "Indoor rounds", "Target Face Outdoor"] as const;
 
-export type ParsedRecords = {
-  records: StandingRecord[];
-  warnings: ParseWarning[];
-};
-
 export async function parseRecordsWorkbook(
   source: string | Buffer | ArrayBuffer,
-): Promise<ParsedRecords> {
+  maps: ReferenceMaps,
+) {
   const workbook = await readWorkbook(source);
-  const records: StandingRecord[] = [];
-  const warnings: ParseWarning[] = [];
+  const records: Array<{
+    holderName: string;
+    competitionName: string;
+    startsOn: Date | null;
+    roundId: string;
+    roundCode: string;
+    bowStyleId: string;
+    ageDivisionId: string;
+    gender: DivisionGender;
+    score: number;
+  }> = [];
+  const warnings: { sheet: string; message: string }[] = [];
 
   for (const name of RECORD_SHEETS) {
     const sheet = workbook.getWorksheet(name);
@@ -31,7 +38,7 @@ export async function parseRecordsWorkbook(
       warnings.push({ sheet: name, message: "sheet is missing" });
       continue;
     }
-    parseRecordsSheet(sheet, name, records, warnings);
+    parseRecordsSheet(sheet, name, maps, records, warnings);
   }
 
   return { records, warnings };
@@ -40,8 +47,19 @@ export async function parseRecordsWorkbook(
 function parseRecordsSheet(
   sheet: ExcelJS.Worksheet,
   sheetName: string,
-  records: StandingRecord[],
-  warnings: ParseWarning[],
+  maps: ReferenceMaps,
+  records: Array<{
+    holderName: string;
+    competitionName: string;
+    startsOn: Date | null;
+    roundId: string;
+    roundCode: string;
+    bowStyleId: string;
+    ageDivisionId: string;
+    gender: DivisionGender;
+    score: number;
+  }>,
+  warnings: { sheet: string; message: string }[],
 ) {
   const cols = columnCount(sheet);
   const rows = rowCount(sheet);
@@ -62,16 +80,17 @@ function parseRecordsSheet(
       });
       continue;
     }
+    const round = requiredRound(maps, roundCode);
 
-    let bowStyleCode: string | null = null;
-    let ageDivisionCode: string | null = null;
-    let gender: "male" | "female" | null = null;
+    let bowStyleId: string | null = null;
+    let ageDivisionId: string | null = null;
+    let gender: DivisionGender | null = null;
 
     for (let rowNumber = 3; rowNumber <= rows; rowNumber += 1) {
       const row = sheet.getRow(rowNumber);
       const division = parseDivisionLabel(cellText(row.getCell(1)));
       if (division) {
-        ageDivisionCode = division.ageDivisionCode;
+        ageDivisionId = requiredId(maps.ageDivisionId, division.ageDivisionCode, "age division");
         gender = division.gender;
       }
 
@@ -82,7 +101,7 @@ function parseRecordsSheet(
 
       const style = bowStyleCodeFromLabel(holder);
       if (style) {
-        bowStyleCode = style;
+        bowStyleId = requiredId(maps.bowStyleId, style, "bow style");
         continue;
       }
 
@@ -90,7 +109,7 @@ function parseRecordsSheet(
       if (score == null) {
         continue;
       }
-      if (!bowStyleCode || !ageDivisionCode || !gender) {
+      if (!bowStyleId || !ageDivisionId || !gender) {
         warnings.push({
           sheet: sheetName,
           message: `record without class at row ${rowNumber}: ${holder}`,
@@ -100,9 +119,10 @@ function parseRecordsSheet(
 
       const when = parseShotWhen(cellScalar(row.getCell(nameCol + 2)));
       records.push({
-        roundCode,
-        bowStyleCode,
-        ageDivisionCode,
+        roundId: round.id,
+        roundCode: round.code,
+        bowStyleId,
+        ageDivisionId,
         gender,
         holderName: holder,
         score,

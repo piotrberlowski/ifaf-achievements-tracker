@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import ExcelJS from "exceljs";
 import { applyIdentityCorrection, parseIdentityCorrectionsCsv } from "./corrections.ts";
 import { parseGainsWorkbook } from "./gains-workbook.ts";
+import { codeForId, referenceMapsFromCatalog } from "./reference.ts";
 
 async function workbookBuffer(build: (wb: ExcelJS.Workbook) => void): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
@@ -35,6 +36,7 @@ function addGainsSheet(
 
 describe("parseGainsWorkbook", () => {
   it("loads numeric scores and issued pins, and applies the Dempsey correction", async () => {
+    const maps = referenceMapsFromCatalog();
     const corrections = parseIdentityCorrectionsCsv(`sourceMembershipNumber,sourceFullName,targetMembershipNumber,reason
 IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
 `);
@@ -63,16 +65,30 @@ IRE_17010,Dempsey David,IRE_17011,SBG scores filed under Una Dempsey's number
       sbg.getCell("K5").value = "GOLD";
     });
 
-    const parsed = await parseGainsWorkbook(buffer, corrections);
+    const parsed = await parseGainsWorkbook(buffer, maps, corrections);
     assert.equal(parsed.scores.length, 3);
-    const una = parsed.scores.filter((score) => score.membershipNumber === "IRE_17010");
-    const david = parsed.scores.filter((score) => score.membershipNumber === "IRE_17011");
-    assert.equal(una.length, 2);
-    assert.equal(david.length, 1);
-    assert.equal(david[0].score, 610);
-    assert.equal(david[0].classCode, "AMBU");
+    const una = parsed.people.find((person) => person.membershipNumber === "IRE_17010");
+    const david = parsed.people.find((person) => person.membershipNumber === "IRE_17011");
+    assert.ok(una?.id);
+    assert.ok(david?.id);
+    const unaScores = parsed.scores.filter((score) => score.personId === una.id);
+    const davidScores = parsed.scores.filter((score) => score.personId === david.id);
+    assert.equal(unaScores.length, 2);
+    assert.equal(davidScores.length, 1);
+    assert.equal(davidScores[0].score, 610);
+    assert.equal(davidScores[0].bowStyleId, maps.bowStyleId.get("BU"));
+    assert.equal(davidScores[0].ageDivisionId, maps.ageDivisionId.get("A"));
+    const davidEntry = parsed.entries.find((entry) => entry.scoreId === davidScores[0].id);
+    assert.equal(davidEntry?.classCode, "AMBU");
     assert.deepEqual(
-      parsed.pins.map((pin) => `${pin.membershipNumber}:${pin.awardTrackCode}:${pin.level}`).sort(),
+      parsed.awards
+        .map((award) => {
+          const membership =
+            parsed.people.find((person) => person.id === award.personId)?.membershipNumber;
+          const track = codeForId(maps.awardTrackId, award.awardTrackId, "award track");
+          return `${membership}:${track}:${award.level}`;
+        })
+        .sort(),
       ["IRE_17010:INDOOR:gold", "IRE_17011:ANIMAL:gold"],
     );
     assert.equal(
