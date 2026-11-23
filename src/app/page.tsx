@@ -85,14 +85,14 @@ export default function Home() {
 
         <div className="flex flex-col gap-4">
           <details
-            className="collapse-arrow collapse rounded-2xl border border-secondary-content/15 bg-secondary text-secondary-content shadow-sm"
+            className="collapse-arrow collapse overflow-hidden rounded-2xl border border-neutral-content/15 bg-neutral text-neutral-content shadow-sm"
             name="achievements"
           >
-            <summary className="collapse-title text-xl font-semibold transition-colors hover:bg-secondary-content/10">
+            <summary className="collapse-title bg-accent text-xl font-semibold text-accent-content transition-colors hover:bg-[color-mix(in_oklab,var(--color-accent),white_12%)]">
               IFAF records
             </summary>
             <div className="collapse-content">
-              <div className="max-w-3xl space-y-4 text-base leading-7 text-secondary-content/85">
+              <div className="max-w-3xl space-y-4 text-base leading-7 text-neutral-content/85">
                 <p>
                   IFAF records recognise the highest approved score shot in
                   every IFAA round type. Records are held within each shooting
@@ -113,14 +113,14 @@ export default function Home() {
           </details>
 
           <details
-            className="collapse-arrow collapse rounded-2xl border border-secondary-content/15 bg-secondary text-secondary-content shadow-sm"
+            className="collapse-arrow collapse overflow-hidden rounded-2xl border border-neutral-content/15 bg-neutral text-neutral-content shadow-sm"
             name="achievements"
           >
-            <summary className="collapse-title text-xl font-semibold transition-colors hover:bg-secondary-content/10">
+            <summary className="collapse-title bg-accent text-xl font-semibold text-accent-content transition-colors hover:bg-[color-mix(in_oklab,var(--color-accent),white_12%)]">
               GAINS awards
             </summary>
             <div className="collapse-content">
-              <div className="max-w-3xl space-y-4 text-base leading-7 text-secondary-content/85">
+              <div className="max-w-3xl space-y-4 text-base leading-7 text-neutral-content/85">
                 <p>
                   GAINS awards are a celebration of your progress as an archer.
                   They challenge you to measure your scores against the best
