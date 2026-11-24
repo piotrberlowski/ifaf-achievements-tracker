@@ -4,9 +4,12 @@ import {
   disciplineName,
   genderCode,
   genderLabel,
+  summary,
+  type AgeDivisionCode,
+  type BowStyleCode,
   type ClassFilterValue,
 } from "@/lib/class-filter";
-import type { StandingRecord } from "@/lib/records/standings";
+import type { RecordStanding } from "@prisma/client";
 
 const achievedDate = new Intl.DateTimeFormat("en-IE", {
   day: "numeric",
@@ -20,7 +23,7 @@ export function RecordResults({
   records,
 }: {
   filter: ClassFilterValue;
-  records: StandingRecord[] | null;
+  records: RecordStanding[] | null;
 }) {
   if (!records || !filter.discipline || filter.bows.length === 0) {
     return (
@@ -38,7 +41,7 @@ export function RecordResults({
         <h2 className="text-2xl font-bold" id="record-results">
           {heading}
         </h2>
-        <p className="mt-2 text-base-content">{filterSummary(filter, records.length)}</p>
+        <p className="mt-2 text-base-content">{summary(filter, records.length)}</p>
       </div>
       {records.length === 0 ? (
         <p className="text-base-content">No standing record matches these filters.</p>
@@ -59,7 +62,7 @@ function RecordTable({
   groups,
   showBow,
 }: {
-  groups: { roundCode: string; roundName: string; records: StandingRecord[] }[];
+  groups: { roundCode: string; roundName: string; records: RecordStanding[] }[];
   showBow: boolean;
 }) {
   const columns = showBow ? 6 : 5;
@@ -130,7 +133,7 @@ function RoundRows({
   showBow,
 }: {
   columns: number;
-  group: { roundCode: string; roundName: string; records: StandingRecord[] };
+  group: { roundCode: string; roundName: string; records: RecordStanding[] };
   showBow: boolean;
 }) {
   return (
@@ -154,9 +157,9 @@ function RoundRows({
             </span>
           </td>
           <td>{record.holder}</td>
-          <CodedCell code={record.ageCode} name={record.ageName} />
-          <CodedCell code={genderCode(record.gender)} name={record.genderName} />
-          {showBow ? <CodeCell code={record.bowCode} name={record.bowName} /> : null}
+          <CodedCell code={record.ageCode} name={ageDivisionName(record.ageCode as AgeDivisionCode)} />
+          <CodedCell code={genderCode(record.gender)} name={genderLabel(record.gender)} />
+          {showBow ? <CodeCell code={record.bowCode} name={bowCategoryName(record.bowCode as BowStyleCode)} /> : null}
         </tr>
       ))}
     </>
@@ -180,8 +183,8 @@ function CodedCell({ code, name }: { code: string; name: string }) {
   );
 }
 
-function EventCell({ record }: { record: StandingRecord }) {
-  const dated = record.achievedOn ? achievedDate.format(record.achievedOn) : null;
+function EventCell({ record }: { record: RecordStanding }) {
+  const dated = record.effectiveOn ? achievedDate.format(record.effectiveOn) : null;
   const event = record.eventName === "Imported record" ? null : record.eventName;
   if (dated && event) {
     return (
@@ -200,18 +203,11 @@ function EventCell({ record }: { record: StandingRecord }) {
   return <span className="text-base-content">Date unknown</span>;
 }
 
-function filterSummary(filter: ClassFilterValue, count: number): string {
-  const countLabel = count === 1 ? "1 standing record" : `${count} standing records`;
-  const ageLabel = filter.ages.length > 0 ? filter.ages.map((age) => ageDivisionName(age)).join(", ") : "all ages";
-  const genderText = filter.gender ? genderLabel(filter.gender) : "all genders";
-  return `${countLabel} · ${ageLabel} · ${genderText}`;
-}
-
-function groupByRound(records: StandingRecord[]) {
+function groupByRound(records: RecordStanding[]) {
   const groups: {
     roundCode: string;
     roundName: string;
-    records: StandingRecord[];
+    records: RecordStanding[];
   }[] = [];
   for (const record of records) {
     const current = groups[groups.length - 1];

@@ -336,15 +336,24 @@ model ScoreVoid {
 }
 
 view RecordStanding {
-  scoreId       String
-  roundId       String
-  bowStyleId    String
-  ageDivisionId String
-  gender        DivisionGender
-  personId      String
-  score         Int
-  effectiveOn   DateTime?      @db.Date
-  recognisedOn  DateTime?      @db.Date
+  scoreId        String
+  roundId        String
+  roundCode      String
+  roundName      String
+  displayOnly    Boolean
+  awardTrackCode String
+  bowStyleId     String
+  bowCode        String
+  ageDivisionId  String
+  ageCode        String
+  gender         DivisionGender
+  personId       String
+  score          Int
+  effectiveOn    DateTime?      @db.Date
+  recognisedOn   DateTime?      @db.Date
+  eventName      String
+  holder         String
+  current        Boolean
 
   @@unique([scoreId])
   @@map("record_standing")

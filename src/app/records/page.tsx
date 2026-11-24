@@ -1,5 +1,5 @@
-import CategoryFilter from "@/components/CategoryFilter";
-import { RecordResults } from "@/components/records/RecordResults";
+import { RecordFilter } from "@/app/records/record-filter";
+import { RecordResults } from "@/app/records/record-results";
 import type { AgeDivisionCode, AwardTrackCode, BowStyleCode } from "@/lib/class-filter";
 import { ageDivisions, bowStyles } from "@/lib/reference/catalog";
 import { findStandingRecords } from "@/lib/records/standings";
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 };
 
 const recordFields = ["discipline", "bow", "age", "gender"] as const satisfies readonly CategoryFilterField[];
-const recordQuery: CategoryQueryOptions = { multiple: ["bow", "age"] };
+const recordQuery: CategoryQueryOptions = { multiple: ["bow", "age", "gender"] };
 
 export default async function RecordsPage({
   searchParams,
@@ -32,6 +32,7 @@ export default async function RecordsPage({
 }) {
   const params = await searchParams;
   const parsed = parseCategoryQuery(params, recordFields, recordQuery);
+  if (parsed.ages.length === ageDivisions.length) parsed.ages = [];
   if (shouldRedirectCategoryQuery(params, parsed, recordFields, recordQuery)) {
     redirect(categoryHref("/records", parsed, recordFields, recordQuery));
   }
@@ -73,17 +74,7 @@ export default async function RecordsPage({
         </div>
       ) : null}
 
-      <CategoryFilter
-        action="/records"
-        fields={recordFields}
-        formKey={categoryHref("/records", parsed, recordFields, recordQuery)}
-        idPrefix="records"
-        legend="Find records"
-        multiple={recordQuery.multiple}
-        required={["discipline", "bow"]}
-        submitLabel="Show records"
-        values={parsed}
-      />
+      <RecordFilter values={parsed} />
       <RecordResults
         filter={{
           discipline,
