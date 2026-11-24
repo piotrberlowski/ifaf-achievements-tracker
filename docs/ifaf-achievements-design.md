@@ -54,13 +54,13 @@ The award key is **person + age division + gender + bow style + award track**. A
 | Competition | One round of archers at one range. Name, date, and round. A second day or a second round type is another competition. An undated meet keeps the name, such as `EBHC 2026`, and has no date. `countsForGains` is false for a record-only event | Import and API |
 | ScoreSubmission | One competition’s entries, still pending. The external id belongs here, so a replay returns this submission | Secretary and API |
 | Score | The approved integer for one person at one competition, referencing that score’s bow style, age division, and gender. The round and the date come from the competition. The band is calculated from the record in force that day | Approval of the submission, or a later amendment |
-| Record standing | A view of the scores that set a record, refreshed after each score is written or voided. The standing record is the highest score for one round, bow style, age division, and gender. An imported record is a competition with one score, even when the event was external and only one archer is known | Read from scores |
+| Record standing | A view of the scores that set a record, refreshed after each score is written or tombstoned. The standing record is the highest score for one round, bow style, age division, and gender. An imported record is a competition with one score, even when the event was external and only one archer is known | Read from scores |
 | GAINS award | One pin per person, bow style, age division, gender, track, and level. `pending` until the pin is handed out, then `issued`, with the issue date when it is known | Engine, and the secretary’s tracker |
 | Permission | A capability granted to a signed-in account: `system.admin`, `claims.approve`, `names.approve`, `submissions.approve`, or `integrations.manage` | System administrator |
 | MembershipClaim | A request to attach a sign-in account to a membership number | Archer, then an account with `claims.approve` |
 | IntegrationClient | One competition app. The issued credential, stored as the certificate fingerprint or a secret hash. The private key is shown once and is not kept | Account with `integrations.manage` |
 
-Scores are append-only. An amendment voids the original score and writes a replacement. The standing record is a view over the scores. Pins are stored, each one pending or issued.
+Scores are append-only. An amendment stamps `tombstoned` on the original score and writes a replacement. The standing record is a view over the scores that are not tombstoned. Pins are stored, each one pending or issued.
 
 ### Class codes
 

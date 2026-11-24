@@ -15,7 +15,6 @@ const roundOrder = new Map<string, number>(rounds.map((round, index) => [round.c
 export async function findStandingRecords(query: RecordQuery): Promise<RecordStanding[]> {
   const rows = await getPrisma().recordStanding.findMany({
     where: {
-      current: true,
       displayOnly: false,
       awardTrackCode: query.discipline,
       bowCode: { in: [...query.bow] },

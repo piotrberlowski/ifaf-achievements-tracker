@@ -74,7 +74,6 @@ model User {
   namesApproved       PersonName[]        @relation("NameApprover")
   submissionsApproved ScoreSubmission[]   @relation("SubmissionApprover")
   submissionsRejected ScoreSubmission[]   @relation("SubmissionRejector")
-  scoreVoids          ScoreVoid[]         @relation("ScoreVoider")
   integrationClients  IntegrationClient[] @relation("CredentialIssuer")
 
   @@unique([email])
@@ -142,11 +141,9 @@ model Verification {
   @@map("verification")
 }
 
-// Score and ScoreVoid reject updates and deletes.
-// A ScoreSubmission can be edited while it is pending. After approval or
-// rejection the row stays. An amendment writes a ScoreVoid and a new Score.
-// record_standing is a view over the scores and is refreshed after each
-// score is written or voided. Pins are stored with status pending or issued.
+// A score is append-only. An amendment stamps tombstoned and writes a new score.
+// record_standing is the current holder for each class, refreshed after a
+// score is written or tombstoned. Pins are stored with status pending or issued.
 
 model Person {
   id               String            @id @default(cuid())
@@ -307,32 +304,18 @@ model Score {
   gender        DivisionGender
   competitionId String
   score         Int
+  tombstoned    Boolean        @default(false)
   createdAt     DateTime       @default(now())
   person        Person         @relation(fields: [personId], references: [id], onDelete: Restrict)
   bowStyle      BowStyle       @relation(fields: [bowStyleId], references: [id], onDelete: Restrict)
   ageDivision   AgeDivision    @relation(fields: [ageDivisionId], references: [id], onDelete: Restrict)
   competition   Competition    @relation(fields: [competitionId], references: [id], onDelete: Restrict)
   entry         SubmissionEntry?
-  voidance      ScoreVoid?     @relation("VoidedScore")
-  replacementFor ScoreVoid?    @relation("ReplacementScore")
 
   @@index([bowStyleId, ageDivisionId, gender])
   @@index([personId, bowStyleId, ageDivisionId, gender])
   @@index([competitionId])
   @@map("score")
-}
-
-model ScoreVoid {
-  id                 String   @id @default(cuid())
-  scoreId            String   @unique
-  replacementScoreId String   @unique
-  voidedAt           DateTime @default(now())
-  voidedById         String
-  score              Score    @relation("VoidedScore", fields: [scoreId], references: [id], onDelete: Restrict)
-  replacementScore   Score    @relation("ReplacementScore", fields: [replacementScoreId], references: [id], onDelete: Restrict)
-  voidedBy           User     @relation("ScoreVoider", fields: [voidedById], references: [id], onDelete: Restrict)
-
-  @@map("score_void")
 }
 
 view RecordStanding {
@@ -353,7 +336,6 @@ view RecordStanding {
   recognisedOn   DateTime?      @db.Date
   eventName      String
   holder         String
-  current        Boolean
 
   @@unique([scoreId])
   @@map("record_standing")
