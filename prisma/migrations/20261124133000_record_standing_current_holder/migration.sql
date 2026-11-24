@@ -1,39 +1,5 @@
--- A score is tombstoned in place. The standing record is the current holder only.
-ALTER TABLE "score" ADD COLUMN "tombstoned" BOOLEAN NOT NULL DEFAULT false;
-
-CREATE FUNCTION score_reject_change() RETURNS trigger
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  IF TG_OP = 'DELETE' THEN
-    RAISE EXCEPTION 'score rows are append-only'
-      USING ERRCODE = 'integrity_constraint_violation';
-  END IF;
-
-  IF OLD.tombstoned OR NOT NEW.tombstoned
-      OR (to_jsonb(OLD) - 'tombstoned') IS DISTINCT FROM (to_jsonb(NEW) - 'tombstoned') THEN
-    RAISE EXCEPTION 'score rows are append-only'
-      USING ERRCODE = 'integrity_constraint_violation';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER score_append_only ON "score";
-
-CREATE TRIGGER score_append_only
-  BEFORE UPDATE OR DELETE ON "score"
-  FOR EACH ROW EXECUTE FUNCTION score_reject_change();
-
-CREATE TRIGGER score_tombstone_refresh_record_standing
-  AFTER UPDATE OF "tombstoned" ON "score"
-  FOR EACH STATEMENT
-  EXECUTE FUNCTION refresh_record_standing();
-
+-- One current holder per class. Voided scores are not records.
 DROP MATERIALIZED VIEW "record_standing";
-
-DROP TABLE "score_void";
 
 CREATE MATERIALIZED VIEW "record_standing" AS
 WITH holder AS (
@@ -55,7 +21,8 @@ WITH holder AS (
         c.name AS "eventName"
     FROM "score" s
     JOIN "competition" c ON c.id = s."competitionId"
-    WHERE NOT s.tombstoned
+    LEFT JOIN "score_void" voided ON voided."scoreId" = s.id
+    WHERE voided.id IS NULL
         AND c."roundId" IS NOT NULL
     ORDER BY
         c."roundId",
