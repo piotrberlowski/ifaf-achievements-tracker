@@ -191,7 +191,9 @@ function writeField(
   allowMany: boolean,
 ): void {
   if (field === "gender") {
-    query.gender = values[0] === "female" ? "female" : "male";
+    const female = values.includes("female");
+    const male = values.includes("male");
+    query.gender = female === male ? null : female ? "female" : "male";
     return;
   }
   if (field === "bow") {
