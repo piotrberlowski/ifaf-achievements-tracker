@@ -16,7 +16,6 @@ export type ImportSummary = {
 export async function clearImportedHistory(prisma: PrismaClient) {
   await prisma.$executeRaw`
     TRUNCATE TABLE
-      "score_void",
       "submission_entry",
       "score",
       "gains_award",
