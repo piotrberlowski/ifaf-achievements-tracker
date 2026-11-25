@@ -1,4 +1,7 @@
 import { bowStyles, type BowStyleCode } from "@/lib/reference/catalog";
+import type { ReactNode } from "react";
+
+type FilterOption<T extends string> = { value: T; label: string; title: string };
 
 export function BowChoice({
   selected,
@@ -8,20 +11,96 @@ export function BowChoice({
   onSelect: (code: BowStyleCode) => void;
 }) {
   return (
+    <ChoiceFilter
+      legend="Bow style"
+      name="bow"
+      onSelect={onSelect}
+      options={bowStyles.map((style) => ({ value: style.code, label: style.code, title: style.name }))}
+      selected={selected}
+    />
+  );
+}
+
+export function ChoiceFilter<T extends string>(
+  props: {
+    legend: string;
+    options: readonly FilterOption<T>[];
+    selected: readonly T[];
+    onAll: () => void;
+    onToggle: (value: T) => void;
+  } | {
+    legend: string;
+    name: string;
+    options: readonly FilterOption<T>[];
+    selected: T;
+    onSelect: (value: T) => void;
+  },
+) {
+  if ("onSelect" in props) {
+    return (
+      <ChoiceButtons
+        checked={(value) => value === props.selected}
+        legend={props.legend}
+        name={props.name}
+        onChange={props.onSelect}
+        options={props.options}
+        type="radio"
+      />
+    );
+  }
+  return (
+    <ChoiceButtons
+      checked={(value) => props.selected.includes(value)}
+      leading={
+        <OptionButton
+          checked={props.selected.length === props.options.length}
+          label="All"
+          onChange={props.onAll}
+          title="All"
+          type="checkbox"
+          value="all"
+        />
+      }
+      legend={props.legend}
+      onChange={props.onToggle}
+      options={props.options}
+      type="checkbox"
+    />
+  );
+}
+
+function ChoiceButtons<T extends string>({
+  checked,
+  leading,
+  legend,
+  name,
+  onChange,
+  options,
+  type,
+}: {
+  checked: (value: T) => boolean;
+  leading?: ReactNode;
+  legend: string;
+  name?: string;
+  onChange: (value: T) => void;
+  options: readonly FilterOption<T>[];
+  type: "checkbox" | "radio";
+}) {
+  return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-medium">Bow style</legend>
+      <legend className="text-sm font-medium">{legend}</legend>
       <div className="flex flex-wrap gap-2">
-        {bowStyles.map((style) => (
-          <input
-            aria-label={style.code}
-            checked={selected === style.code}
-            className="btn btn-sm"
-            key={style.code}
-            name="bow"
-            onChange={() => onSelect(style.code)}
-            title={style.name}
-            type="radio"
-            value={style.code}
+        {leading}
+        {options.map((option) => (
+          <OptionButton
+            checked={checked(option.value)}
+            key={option.value}
+            label={option.label}
+            name={name}
+            onChange={() => onChange(option.value)}
+            title={option.title}
+            type={type}
+            value={option.value}
           />
         ))}
       </div>
@@ -29,43 +108,33 @@ export function BowChoice({
   );
 }
 
-export function ChoiceFilter<T extends string>({
-  legend,
-  options,
-  selected,
-  onAll,
-  onToggle,
+function OptionButton({
+  checked,
+  label,
+  name,
+  onChange,
+  title,
+  type,
+  value,
 }: {
-  legend: string;
-  options: readonly { value: T; label: string; title: string }[];
-  selected: readonly T[];
-  onAll: () => void;
-  onToggle: (value: T) => void;
+  checked: boolean;
+  label: string;
+  name?: string;
+  onChange: () => void;
+  title: string;
+  type: "checkbox" | "radio";
+  value: string;
 }) {
-  const allOn = selected.length === options.length;
   return (
-    <fieldset className="flex flex-col gap-2">
-      <legend className="text-sm font-medium">{legend}</legend>
-      <div className="filter">
-        <input
-          aria-label="All"
-          checked={allOn}
-          className="btn btn-sm"
-          onChange={onAll}
-          type="checkbox"
-        />
-        {options.map((option) => (
-          <input
-            aria-label={option.label}
-            checked={selected.includes(option.value)}
-            className="btn btn-sm"
-            key={option.value}
-            onChange={() => onToggle(option.value)}
-            title={option.title}
-            type="checkbox"
-          />
-        ))}
-      </div>
-    </fieldset>
+    <input
+      aria-label={label}
+      checked={checked}
+      className="btn btn-sm"
+      name={name}
+      onChange={onChange}
+      title={title}
+      type={type}
+      value={value}
+    />
   );
 }
