@@ -14,7 +14,7 @@
     "db:status": "dotenv -e .env.local --override -- prisma migrate status",
     "db:seed": "dotenv -e .env.local --override -- prisma db seed",
     "import:ifaf": "dotenv -e .env.local --override -- node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/import-ifaf.ts",
-    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/lib/reference/parse-class-code.test.ts src/lib/search/category-query.test.ts src/lib/import/*.test.ts"
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test src/lib/reference/parse-class-code.test.ts src/lib/search/category-query.test.ts src/lib/records/view-filter.test.ts src/lib/import/*.test.ts"
   },
   "dependencies": {
     "@better-auth/prisma-adapter": "^1.7.23",

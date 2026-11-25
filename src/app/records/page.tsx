@@ -1,13 +1,12 @@
-import { RecordFilter } from "@/app/records/record-filter";
-import { RecordResults } from "@/app/records/record-results";
-import type { AgeDivisionCode, AwardTrackCode, BowStyleCode } from "@/lib/class-filter";
-import { ageDivisions, bowStyles } from "@/lib/reference/catalog";
-import { findStandingRecords } from "@/lib/records/standings";
+import { RecordBrowser } from "@/app/records/record-browser";
+import { listStandingRecords } from "@/lib/records/standings";
+import { allAges, allBows, initialRecordView } from "@/lib/records/view-filter";
 import {
   categoryHref,
   parseCategoryQuery,
   shouldRedirectCategoryQuery,
   type CategoryFilterField,
+  type CategoryQuery,
   type CategoryQueryOptions,
   type SearchParams,
 } from "@/lib/search/category-query";
@@ -23,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 const recordFields = ["discipline", "bow", "age", "gender"] as const satisfies readonly CategoryFilterField[];
-const recordQuery: CategoryQueryOptions = { multiple: ["bow", "age", "gender"] };
+const recordQuery: CategoryQueryOptions = { multiple: ["age", "gender"] };
 
 export default async function RecordsPage({
   searchParams,
@@ -31,23 +30,12 @@ export default async function RecordsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const parsed = parseCategoryQuery(params, recordFields, recordQuery);
-  if (parsed.ages.length === ageDivisions.length) parsed.ages = [];
+  const parsed = withRecordDefaults(parseCategoryQuery(params, recordFields, recordQuery));
   if (shouldRedirectCategoryQuery(params, parsed, recordFields, recordQuery)) {
     redirect(categoryHref("/records", parsed, recordFields, recordQuery));
   }
 
-  const discipline = asDiscipline(parsed.discipline);
-  const bows = asBows(parsed.bows);
-  const records =
-    discipline && bows.length > 0 && parsed.errors.length === 0
-      ? await findStandingRecords({
-          discipline,
-          bow: bows,
-          age: asAges(parsed.ages),
-          gender: parsed.gender,
-        })
-      : null;
+  const records = parsed.errors.length === 0 ? await listStandingRecords() : [];
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
@@ -59,8 +47,7 @@ export default async function RecordsPage({
       <section className="rounded-3xl bg-neutral px-6 py-10 text-neutral-content shadow-xl sm:px-10">
         <h1 className="text-4xl font-bold sm:text-5xl">IFAF records</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content">
-          Find standing records for a discipline and the bow styles you pick. Age
-          groups and gender narrow the class.
+          Standing records for the open discipline are listed in that tab. Filters narrow the list.
         </p>
       </section>
 
@@ -72,34 +59,24 @@ export default async function RecordsPage({
             ))}
           </ul>
         </div>
-      ) : null}
-
-      <RecordFilter values={parsed} />
-      <RecordResults
-        filter={{
-          discipline,
-          bows,
-          ages: asAges(parsed.ages),
-          gender: parsed.gender,
-        }}
-        records={records}
-      />
+      ) : (
+        <RecordBrowser
+          initial={initialRecordView(parsed)}
+          records={records}
+        />
+      )}
     </div>
   );
 }
 
-function asDiscipline(value: string | null): AwardTrackCode | null {
-  if (value === "INDOOR" || value === "ANIMAL" || value === "FIELD") return value;
-  return null;
-}
-
-const bowCodes = new Set<string>(bowStyles.map((style) => style.code));
-const ageCodes = new Set<string>(ageDivisions.map((division) => division.code));
-
-function asBows(values: string[]): BowStyleCode[] {
-  return values.filter((value): value is BowStyleCode => bowCodes.has(value));
-}
-
-function asAges(values: string[]): AgeDivisionCode[] {
-  return values.filter((value): value is AgeDivisionCode => ageCodes.has(value));
+function withRecordDefaults(parsed: CategoryQuery): CategoryQuery {
+  if (parsed.errors.length > 0) return parsed;
+  const bow = parsed.bow ?? allBows[0];
+  return {
+    ...parsed,
+    discipline: parsed.discipline ?? "ANIMAL",
+    bow,
+    bows: parsed.bow ? parsed.bows : [bow],
+    ages: parsed.ages.length === allAges.length ? [] : parsed.ages,
+  };
 }

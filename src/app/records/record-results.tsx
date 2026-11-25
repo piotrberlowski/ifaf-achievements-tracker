@@ -1,15 +1,5 @@
-import {
-  ageDivisionName,
-  bowCategoryName,
-  disciplineName,
-  genderCode,
-  genderLabel,
-  summary,
-  type AgeDivisionCode,
-  type BowStyleCode,
-  type ClassFilterValue,
-} from "@/lib/class-filter";
-import type { RecordStanding } from "@prisma/client";
+import { ageDivisionName, bowCategoryName, disciplineName, genderCode, genderLabel, standingSummary } from "@/app/records/labels";
+import type { RecordView, StandingRecord } from "@/lib/records/view-filter";
 
 const achievedDate = new Intl.DateTimeFormat("en-IE", {
   day: "numeric",
@@ -19,53 +9,38 @@ const achievedDate = new Intl.DateTimeFormat("en-IE", {
 });
 
 export function RecordResults({
-  filter,
   records,
+  view,
 }: {
-  filter: ClassFilterValue;
-  records: RecordStanding[] | null;
+  records: StandingRecord[];
+  view: RecordView;
 }) {
-  if (!records || !filter.discipline || filter.bows.length === 0) {
-    return (
-      <p className="text-base-content">
-        Choose a discipline and a bow category to see the standing records.
-      </p>
-    );
-  }
-
-  const heading = resultHeading(filter);
-
   return (
     <section aria-labelledby="record-results" className="flex flex-col gap-6">
       <div>
         <h2 className="text-2xl font-bold" id="record-results">
-          {heading}
+          {resultHeading(view)}
         </h2>
-        <p className="mt-2 text-base-content">{summary(filter, records.length)}</p>
+        <p className="mt-2 text-base-content">{standingSummary(view, records.length)}</p>
       </div>
       {records.length === 0 ? (
         <p className="text-base-content">No standing record matches these filters.</p>
       ) : (
-        <RecordTable groups={groupByRound(records)} showBow={filter.bows.length > 1} />
+        <RecordTable groups={groupByRound(records)} />
       )}
     </section>
   );
 }
 
-function resultHeading(filter: ClassFilterValue): string {
-  const discipline = filter.discipline ? disciplineName(filter.discipline) : "";
-  const styles = filter.bows.map((bow) => bowCategoryName(bow)).join(", ");
-  return `${discipline} · ${styles}`;
+function resultHeading(view: RecordView): string {
+  return `${disciplineName(view.discipline)} · ${bowCategoryName(view.bow)}`;
 }
 
 function RecordTable({
   groups,
-  showBow,
 }: {
-  groups: { roundCode: string; roundName: string; records: RecordStanding[] }[];
-  showBow: boolean;
+  groups: { roundCode: string; roundName: string; records: StandingRecord[] }[];
 }) {
-  const columns = showBow ? 6 : 5;
   return (
     <div className="overflow-x-auto rounded-2xl border border-base-300 bg-base-100">
       <table className="table table-xs w-full table-fixed text-base-content md:table-sm">
@@ -76,7 +51,6 @@ function RecordTable({
           <col />
           <col className="w-8 md:w-28" />
           <col className="w-8 md:w-24" />
-          {showBow ? <col className="w-14 md:w-16" /> : null}
         </colgroup>
         <thead>
           <tr>
@@ -85,12 +59,11 @@ function RecordTable({
             <ColumnHead label="Archer" />
             <ColumnHead label="Age" narrow short="Age" />
             <ColumnHead label="Gender" narrow short="G" />
-            {showBow ? <ColumnHead label="Bow" narrow short="Bow" /> : null}
           </tr>
         </thead>
         <tbody>
           {groups.map((group) => (
-            <RoundRows columns={columns} group={group} key={group.roundCode} showBow={showBow} />
+            <RoundRows group={group} key={group.roundCode} />
           ))}
         </tbody>
       </table>
@@ -128,26 +101,19 @@ function ColumnLabel({ label, short }: { label: string; short?: string }) {
 }
 
 function RoundRows({
-  columns,
   group,
-  showBow,
 }: {
-  columns: number;
-  group: { roundCode: string; roundName: string; records: RecordStanding[] };
-  showBow: boolean;
+  group: { roundCode: string; roundName: string; records: StandingRecord[] };
 }) {
   return (
     <>
       <tr className="bg-neutral text-neutral-content">
-        <th className="bg-neutral text-neutral-content" colSpan={columns} scope="colgroup">
+        <th className="bg-neutral text-neutral-content" colSpan={5} scope="colgroup">
           {group.roundName}
         </th>
       </tr>
       {group.records.map((record) => (
-        <tr
-          className="bg-base-200 [&>td]:bg-base-200"
-          key={`${record.bowCode}-${group.roundCode}-${record.ageCode}-${record.gender}`}
-        >
+        <tr className="bg-base-200 [&>td]:bg-base-200" key={`${group.roundCode}-${record.ageCode}-${record.gender}`}>
           <td>
             <EventCell record={record} />
           </td>
@@ -157,20 +123,11 @@ function RoundRows({
             </span>
           </td>
           <td>{record.holder}</td>
-          <CodedCell code={record.ageCode} name={ageDivisionName(record.ageCode as AgeDivisionCode)} />
+          <CodedCell code={record.ageCode} name={ageDivisionName(record.ageCode)} />
           <CodedCell code={genderCode(record.gender)} name={genderLabel(record.gender)} />
-          {showBow ? <CodeCell code={record.bowCode} name={bowCategoryName(record.bowCode as BowStyleCode)} /> : null}
         </tr>
       ))}
     </>
-  );
-}
-
-function CodeCell({ code, name }: { code: string; name: string }) {
-  return (
-    <td className="px-0.5 text-center" title={name}>
-      {code}
-    </td>
   );
 }
 
@@ -183,8 +140,8 @@ function CodedCell({ code, name }: { code: string; name: string }) {
   );
 }
 
-function EventCell({ record }: { record: RecordStanding }) {
-  const dated = record.effectiveOn ? achievedDate.format(record.effectiveOn) : null;
+function EventCell({ record }: { record: StandingRecord }) {
+  const dated = record.effectiveOn ? achievedDate.format(new Date(record.effectiveOn)) : null;
   const event = record.eventName === "Imported record" ? null : record.eventName;
   if (dated && event) {
     return (
@@ -203,11 +160,11 @@ function EventCell({ record }: { record: RecordStanding }) {
   return <span className="text-base-content">Date unknown</span>;
 }
 
-function groupByRound(records: RecordStanding[]) {
+function groupByRound(records: StandingRecord[]) {
   const groups: {
     roundCode: string;
     roundName: string;
-    records: RecordStanding[];
+    records: StandingRecord[];
   }[] = [];
   for (const record of records) {
     const current = groups[groups.length - 1];

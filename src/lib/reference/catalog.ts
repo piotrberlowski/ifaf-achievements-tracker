@@ -34,6 +34,11 @@ export const genders = [
   { code: "F", name: "Female", value: "female" },
 ] as const;
 
+export type AwardTrackCode = (typeof awardTracks)[number]["code"];
+export type BowStyleCode = (typeof bowStyles)[number]["code"];
+export type AgeDivisionCode = (typeof ageDivisions)[number]["code"];
+export type GenderValue = (typeof genders)[number]["value"];
+
 export const classCodes = ageDivisions.flatMap((division) =>
   genders.flatMap((gender) =>
     bowStyles.map((style) => ({
