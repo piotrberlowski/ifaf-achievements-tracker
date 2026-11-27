@@ -18,7 +18,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "GAINS awards",
+  title: "GAINS thresholds",
   description: "Find the Bronze, Silver, Gold, and Star scores for your discipline and bow style.",
 };
 
@@ -45,7 +45,7 @@ export default async function GainsPage({
       </Link>
 
       <section className="rounded-3xl bg-neutral px-6 py-10 text-neutral-content shadow-xl sm:px-10">
-        <h1 className="text-4xl font-bold sm:text-5xl">GAINS awards</h1>
+        <h1 className="text-4xl font-bold sm:text-5xl">GAINS thresholds</h1>
         <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content">
           Bronze, Silver, Gold, and Star scores for the open discipline are listed in that tab.
           Filters narrow the list.
