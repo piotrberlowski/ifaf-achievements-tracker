@@ -1,8 +1,6 @@
 "use client";
 
-import { BowChoice, ChoiceFilter } from "@/app/records/choice-filter";
-import { RecordResults } from "@/app/records/record-results";
-import GainsThresholds from "@/components/GainsThresholds";
+import { BowChoice, ChoiceFilter } from "@/components/ChoiceFilter";
 import { ageDivisions, awardTracks, genders } from "@/lib/reference/catalog";
 import {
   allAges,
@@ -24,11 +22,13 @@ const tracks = [...awardTracks].sort(
   (left, right) => disciplineOrder.indexOf(left.code) - disciplineOrder.indexOf(right.code),
 );
 
-export function RecordBrowser({
+export function StandingBrowser({
+  children,
   initial,
   pathname,
   records,
 }: {
+  children: (visible: StandingRecord[], view: RecordView) => ReactNode;
   initial: RecordView;
   pathname: "/gains" | "/records";
   records: StandingRecord[];
@@ -54,13 +54,9 @@ export function RecordBrowser({
           onSelect={() => apply({ ...view, discipline: track.code })}
         >
           {view.discipline === track.code ? (
-            <RecordTab onApply={apply} view={view}>
-              {pathname === "/records" ? (
-                <RecordResults records={visible} view={view} />
-              ) : (
-                <GainsThresholds records={visible} view={view} />
-              )}
-            </RecordTab>
+            <FilterPanel onApply={apply} view={view}>
+              {children(visible, view)}
+            </FilterPanel>
           ) : null}
         </DisciplineTab>
       ))}
@@ -95,7 +91,7 @@ function DisciplineTab({
   );
 }
 
-function RecordTab({
+function FilterPanel({
   children,
   onApply,
   view,
