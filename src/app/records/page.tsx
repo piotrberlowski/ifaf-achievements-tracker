@@ -1,4 +1,4 @@
-import { RecordBrowser } from "@/app/records/record-browser";
+import { RecordsExplorer } from "@/app/records/records-explorer";
 import { listStandingRecords } from "@/lib/records/standings";
 import {
   initialRecordView,
@@ -61,7 +61,7 @@ export default async function RecordsPage({
           </ul>
         </div>
       ) : (
-        <RecordBrowser initial={initialRecordView(parsed)} pathname="/records" records={records} />
+        <RecordsExplorer initial={initialRecordView(parsed)} records={records} />
       )}
     </div>
   );

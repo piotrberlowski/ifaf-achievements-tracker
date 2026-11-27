@@ -1,4 +1,4 @@
-import { RecordBrowser } from "@/app/records/record-browser";
+import { GainsExplorer } from "@/app/gains/gains-explorer";
 import { listStandingRecords } from "@/lib/records/standings";
 import {
   initialRecordView,
@@ -61,7 +61,7 @@ export default async function GainsPage({
           </ul>
         </div>
       ) : (
-        <RecordBrowser initial={initialRecordView(parsed)} pathname="/gains" records={records} />
+        <GainsExplorer initial={initialRecordView(parsed)} records={records} />
       )}
     </div>
   );
