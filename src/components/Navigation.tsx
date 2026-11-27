@@ -17,7 +17,7 @@ export default async function Navigation({ className }: { className?: string }) 
         <Link href="/records">Records</Link>
       </li>
       <li>
-        <Link href="/gains">GAINS</Link>
+        <Link href="/gains">GAINS Thresholds</Link>
       </li>
       {showPermissions && (
         <li>

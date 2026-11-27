@@ -2,12 +2,15 @@
 
 import { BowChoice, ChoiceFilter } from "@/app/records/choice-filter";
 import { RecordResults } from "@/app/records/record-results";
+import GainsThresholds from "@/components/GainsThresholds";
 import { ageDivisions, awardTracks, genders } from "@/lib/reference/catalog";
 import {
   allAges,
   allGenders,
   narrowSelection,
   recordIsVisible,
+  standingFilterFields,
+  standingFilterQuery,
   type RecordView,
   type StandingRecord,
 } from "@/lib/records/view-filter";
@@ -16,19 +19,29 @@ import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import { useState, type ReactNode } from "react";
 
 const disciplineOrder = ["ANIMAL", "FIELD", "INDOOR"];
-const recordFields = ["discipline", "bow", "age", "gender"] as const;
-const recordQuery = { multiple: ["age", "gender"] } as const;
 
 const tracks = [...awardTracks].sort(
   (left, right) => disciplineOrder.indexOf(left.code) - disciplineOrder.indexOf(right.code),
 );
 
-export function RecordBrowser({ initial, records }: { initial: RecordView; records: StandingRecord[] }) {
+export function RecordBrowser({
+  initial,
+  pathname,
+  records,
+}: {
+  initial: RecordView;
+  pathname: "/gains" | "/records";
+  records: StandingRecord[];
+}) {
   const [view, setView] = useState(initial);
   const visible = records.filter((record) => recordIsVisible(record, view));
   const apply = (next: RecordView) => {
     setView(next);
-    window.history.replaceState(null, "", categoryHref("/records", viewToQuery(next), recordFields, recordQuery));
+    window.history.replaceState(
+      null,
+      "",
+      categoryHref(pathname, viewToQuery(next), standingFilterFields, standingFilterQuery),
+    );
   };
 
   return (
@@ -41,7 +54,13 @@ export function RecordBrowser({ initial, records }: { initial: RecordView; recor
           onSelect={() => apply({ ...view, discipline: track.code })}
         >
           {view.discipline === track.code ? (
-            <RecordTab onApply={apply} records={visible} view={view} />
+            <RecordTab onApply={apply} view={view}>
+              {pathname === "/records" ? (
+                <RecordResults records={visible} view={view} />
+              ) : (
+                <GainsThresholds records={visible} view={view} />
+              )}
+            </RecordTab>
           ) : null}
         </DisciplineTab>
       ))}
@@ -77,19 +96,19 @@ function DisciplineTab({
 }
 
 function RecordTab({
+  children,
   onApply,
-  records,
   view,
 }: {
+  children: ReactNode;
   onApply: (next: RecordView) => void;
-  records: StandingRecord[];
   view: RecordView;
 }) {
   return (
     <div className="flex flex-col gap-6">
       <BowChoice onSelect={(bow) => onApply({ ...view, bow })} selected={view.bow} />
       <OptionalFilters onApply={onApply} view={view} />
-      <RecordResults records={records} view={view} />
+      {children}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   type BowStyleCode,
   type GenderValue,
 } from "../reference/catalog.ts";
+import type { CategoryFilterField, CategoryQuery, CategoryQueryOptions } from "../search/category-query.ts";
 
 export type StandingRecord = {
   roundCode: string;
@@ -31,6 +32,15 @@ export type RecordView = {
 export const allBows: readonly BowStyleCode[] = bowStyles.map((style) => style.code);
 export const allAges: readonly AgeDivisionCode[] = ageDivisions.map((division) => division.code);
 export const allGenders: readonly GenderValue[] = genders.map((gender) => gender.value);
+
+export const standingFilterFields = [
+  "discipline",
+  "bow",
+  "age",
+  "gender",
+] as const satisfies readonly CategoryFilterField[];
+
+export const standingFilterQuery = { multiple: ["age", "gender"] } as const satisfies CategoryQueryOptions;
 
 const bowCodes = new Set<string>(allBows);
 const ageCodes = new Set<string>(allAges);
@@ -61,6 +71,37 @@ export function recordIsVisible(record: StandingRecord, view: RecordView): boole
   if (record.bowCode !== view.bow) return false;
   if (!view.ages.includes(record.ageCode)) return false;
   return view.genders.includes(record.gender);
+}
+
+export function withStandingDefaults(parsed: CategoryQuery): CategoryQuery {
+  if (parsed.errors.length > 0) return parsed;
+  const bow = parsed.bow ?? allBows[0];
+  return {
+    ...parsed,
+    discipline: parsed.discipline ?? "ANIMAL",
+    bow,
+    bows: parsed.bow ? parsed.bows : [bow],
+    ages: parsed.ages.length === allAges.length ? [] : parsed.ages,
+  };
+}
+
+export function groupStandingsByRound<T extends { roundCode: string; roundName: string }>(
+  records: readonly T[],
+): { roundCode: string; roundName: string; records: T[] }[] {
+  const groups: { roundCode: string; roundName: string; records: T[] }[] = [];
+  for (const record of records) {
+    const current = groups[groups.length - 1];
+    if (!current || current.roundCode !== record.roundCode) {
+      groups.push({
+        roundCode: record.roundCode,
+        roundName: record.roundName,
+        records: [record],
+      });
+      continue;
+    }
+    current.records.push(record);
+  }
+  return groups;
 }
 
 function asBow(value: string | null): BowStyleCode {

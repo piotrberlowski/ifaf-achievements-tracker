@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { allAges, allBows, narrowSelection, recordIsVisible, type StandingRecord } from "./view-filter.ts";
+import {
+  allAges,
+  allBows,
+  groupStandingsByRound,
+  narrowSelection,
+  recordIsVisible,
+  withStandingDefaults,
+  type StandingRecord,
+} from "./view-filter.ts";
 
 const record: StandingRecord = {
   roundCode: "SBG",
@@ -49,5 +57,34 @@ describe("recordIsVisible", () => {
   it("hides a record outside the selected discipline or bow", () => {
     assert.equal(recordIsVisible(record, { ...view, discipline: "FIELD" }), false);
     assert.equal(recordIsVisible(record, { ...view, bow: "LB" }), false);
+  });
+});
+
+describe("withStandingDefaults", () => {
+  it("opens Animal and the first bow when the query is empty", () => {
+    const parsed = withStandingDefaults({
+      discipline: null,
+      round: null,
+      bow: null,
+      bows: [],
+      age: null,
+      ages: [],
+      gender: null,
+      errors: [],
+    });
+    assert.equal(parsed.discipline, "ANIMAL");
+    assert.equal(parsed.bow, allBows[0]);
+    assert.deepEqual(parsed.bows, [allBows[0]]);
+  });
+});
+
+describe("groupStandingsByRound", () => {
+  it("keeps consecutive rows for the same round together", () => {
+    const field = { ...record, roundCode: "FIELD", roundName: "Field" };
+    const groups = groupStandingsByRound([record, record, field]);
+    assert.equal(groups.length, 2);
+    assert.equal(groups[0]?.roundCode, "SBG");
+    assert.equal(groups[0]?.records.length, 2);
+    assert.equal(groups[1]?.roundCode, "FIELD");
   });
 });
