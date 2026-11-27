@@ -1,6 +1,6 @@
 "use client";
 
-import GainsThresholds from "@/components/GainsThresholds";
+import GainsThresholds from "./GainsThresholds";
 import { StandingBrowser } from "@/components/StandingBrowser";
 import type { RecordView, StandingRecord } from "@/lib/records/view-filter";
 
