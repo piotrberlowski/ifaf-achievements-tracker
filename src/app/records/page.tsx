@@ -1,13 +1,15 @@
 import { RecordBrowser } from "@/app/records/record-browser";
 import { listStandingRecords } from "@/lib/records/standings";
-import { allAges, allBows, initialRecordView } from "@/lib/records/view-filter";
+import {
+  initialRecordView,
+  standingFilterFields,
+  standingFilterQuery,
+  withStandingDefaults,
+} from "@/lib/records/view-filter";
 import {
   categoryHref,
   parseCategoryQuery,
   shouldRedirectCategoryQuery,
-  type CategoryFilterField,
-  type CategoryQuery,
-  type CategoryQueryOptions,
   type SearchParams,
 } from "@/lib/search/category-query";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
@@ -21,18 +23,17 @@ export const metadata: Metadata = {
     "Find Irish Field Archery Federation records by discipline and bow style.",
 };
 
-const recordFields = ["discipline", "bow", "age", "gender"] as const satisfies readonly CategoryFilterField[];
-const recordQuery: CategoryQueryOptions = { multiple: ["age", "gender"] };
-
 export default async function RecordsPage({
   searchParams,
 }: {
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const parsed = withRecordDefaults(parseCategoryQuery(params, recordFields, recordQuery));
-  if (shouldRedirectCategoryQuery(params, parsed, recordFields, recordQuery)) {
-    redirect(categoryHref("/records", parsed, recordFields, recordQuery));
+  const parsed = withStandingDefaults(
+    parseCategoryQuery(params, standingFilterFields, standingFilterQuery),
+  );
+  if (shouldRedirectCategoryQuery(params, parsed, standingFilterFields, standingFilterQuery)) {
+    redirect(categoryHref("/records", parsed, standingFilterFields, standingFilterQuery));
   }
 
   const records = parsed.errors.length === 0 ? await listStandingRecords() : [];
@@ -60,23 +61,8 @@ export default async function RecordsPage({
           </ul>
         </div>
       ) : (
-        <RecordBrowser
-          initial={initialRecordView(parsed)}
-          records={records}
-        />
+        <RecordBrowser initial={initialRecordView(parsed)} pathname="/records" records={records} />
       )}
     </div>
   );
-}
-
-function withRecordDefaults(parsed: CategoryQuery): CategoryQuery {
-  if (parsed.errors.length > 0) return parsed;
-  const bow = parsed.bow ?? allBows[0];
-  return {
-    ...parsed,
-    discipline: parsed.discipline ?? "ANIMAL",
-    bow,
-    bows: parsed.bow ? parsed.bows : [bow],
-    ages: parsed.ages.length === allAges.length ? [] : parsed.ages,
-  };
 }

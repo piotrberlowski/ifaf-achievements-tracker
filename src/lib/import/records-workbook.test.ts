@@ -18,7 +18,7 @@ describe("parseRecordsWorkbook", () => {
     animal.getCell("A4").value = "Senior (M)";
     animal.getCell("J4").value = "Peter Gilmore";
     animal.getCell("K4").value = 460;
-    animal.getCell("L4").value = "EBHC 2026";
+    animal.getCell("L4").value = "Club shoot";
     workbook.addWorksheet("Indoor rounds");
     workbook.addWorksheet("Target Face Outdoor");
 
@@ -31,6 +31,6 @@ describe("parseRecordsWorkbook", () => {
     assert.equal(parsed.records[0].gender, "male");
     assert.equal(parsed.records[0].score, 460);
     assert.equal(parsed.records[0].startsOn, null);
-    assert.equal(parsed.records[0].competitionName, "EBHC 2026");
+    assert.equal(parsed.records[0].competitionName, "Club shoot");
   });
 });

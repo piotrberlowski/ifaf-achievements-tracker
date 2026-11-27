@@ -1,38 +1,68 @@
+import { RecordBrowser } from "@/app/records/record-browser";
+import { listStandingRecords } from "@/lib/records/standings";
+import {
+  initialRecordView,
+  standingFilterFields,
+  standingFilterQuery,
+  withStandingDefaults,
+} from "@/lib/records/view-filter";
+import {
+  categoryHref,
+  parseCategoryQuery,
+  shouldRedirectCategoryQuery,
+  type SearchParams,
+} from "@/lib/search/category-query";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "GAINS awards",
-  description:
-    "Explore GAINS benchmarks and award progress for Irish field archers.",
+  description: "Find the Bronze, Silver, Gold, and Star scores for your discipline and bow style.",
 };
 
-export default function GainsPage() {
+export default async function GainsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const params = await searchParams;
+  const parsed = withStandingDefaults(
+    parseCategoryQuery(params, standingFilterFields, standingFilterQuery),
+  );
+  if (shouldRedirectCategoryQuery(params, parsed, standingFilterFields, standingFilterQuery)) {
+    redirect(categoryHref("/gains", parsed, standingFilterFields, standingFilterQuery));
+  }
+
+  const records = parsed.errors.length === 0 ? await listStandingRecords() : [];
+
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 sm:py-16">
       <Link className="link inline-flex items-center gap-2 self-start" href="/">
         <ArrowLeftIcon aria-hidden="true" className="size-4" />
         Back to achievements
       </Link>
 
       <section className="rounded-3xl bg-neutral px-6 py-10 text-neutral-content shadow-xl sm:px-10">
-        <span className="badge badge-accent mb-5">Preview</span>
         <h1 className="text-4xl font-bold sm:text-5xl">GAINS awards</h1>
-        <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content/80">
-          Find your next benchmark and follow your progress through Bronze,
-          Silver, Gold, Hotshot, and Star.
+        <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-content">
+          Bronze, Silver, Gold, and Star scores for the open discipline are listed in that tab.
+          Filters narrow the list.
         </p>
       </section>
 
-      <section className="rounded-2xl border border-base-300 bg-base-100 p-6 shadow-sm sm:p-8">
-        <h2 className="text-2xl font-bold">GAINS explorer coming soon</h2>
-        <p className="mt-3 max-w-2xl leading-7 text-base-content/70">
-          This page will let you choose a round and shooting category to see
-          the scores needed for each award, along with the progress already
-          recorded by IFAF archers.
-        </p>
-      </section>
+      {parsed.errors.length > 0 ? (
+        <div className="rounded-2xl border border-error/40 bg-error/10 px-4 py-3 text-sm" role="alert">
+          <ul className="list-disc pl-5">
+            {parsed.errors.map((error) => (
+              <li key={error.field}>{error.message}</li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <RecordBrowser initial={initialRecordView(parsed)} pathname="/gains" records={records} />
+      )}
     </div>
   );
 }

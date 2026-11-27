@@ -1,5 +1,5 @@
 import { ageDivisionName, bowCategoryName, disciplineName, genderCode, genderLabel, standingSummary } from "@/app/records/labels";
-import type { RecordView, StandingRecord } from "@/lib/records/view-filter";
+import { groupStandingsByRound, type RecordView, type StandingRecord } from "@/lib/records/view-filter";
 
 const achievedDate = new Intl.DateTimeFormat("en-IE", {
   day: "numeric",
@@ -26,7 +26,7 @@ export function RecordResults({
       {records.length === 0 ? (
         <p className="text-base-content">No standing record matches these filters.</p>
       ) : (
-        <RecordTable groups={groupByRound(records)} />
+        <RecordTable groups={groupStandingsByRound(records)} />
       )}
     </section>
   );
@@ -158,25 +158,4 @@ function EventCell({ record }: { record: StandingRecord }) {
     return event;
   }
   return <span className="text-base-content">Date unknown</span>;
-}
-
-function groupByRound(records: StandingRecord[]) {
-  const groups: {
-    roundCode: string;
-    roundName: string;
-    records: StandingRecord[];
-  }[] = [];
-  for (const record of records) {
-    const current = groups[groups.length - 1];
-    if (!current || current.roundCode !== record.roundCode) {
-      groups.push({
-        roundCode: record.roundCode,
-        roundName: record.roundName,
-        records: [record],
-      });
-      continue;
-    }
-    current.records.push(record);
-  }
-  return groups;
 }
