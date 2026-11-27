@@ -1,11 +1,11 @@
-import { ageDivisions, genders } from "../reference/catalog.ts";
+import { ageDivisions, genders, type AgeDivisionCode } from "../reference/catalog.ts";
 import type { StandingRecord } from "../records/view-filter.ts";
 import { gainsCutoffs } from "./cutoffs.ts";
 
 export type GainsThresholdRow = {
   roundCode: string;
   roundName: string;
-  ageDivisionCode: string;
+  ageDivisionCode: AgeDivisionCode;
   ageDivisionName: string;
   gender: StandingRecord["gender"];
   genderName: string;

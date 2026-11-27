@@ -5,7 +5,7 @@ import {
   genderCode,
   genderLabel,
 } from "@/app/records/labels";
-import { gainsBands } from "@/lib/gains/cutoffs";
+import { gainsBands, type GainsBandLevel } from "@/lib/gains/cutoffs";
 import { standingThresholds, type GainsThresholdRow } from "@/lib/gains/thresholds";
 import {
   groupStandingsByRound,
@@ -15,6 +15,13 @@ import {
 
 const scoreFormat = new Intl.NumberFormat("en-IE");
 const columnCount = 7;
+
+const bandBadgeClass: Record<GainsBandLevel, string> = {
+  bronze: "bg-[#8B4E24] text-[#fffdf6]",
+  silver: "bg-[#C5CAD3] text-[#1e2a23]",
+  gold: "bg-warning text-warning-content",
+  star: "bg-[#1D4ED8] text-white",
+};
 
 export default function GainsThresholds({
   records,
@@ -121,12 +128,12 @@ function RoundRows({
           key={`${row.roundCode}-${row.ageDivisionCode}-${row.gender}`}
         >
           {gainsBands.map((band) => (
-            <td className="text-right font-medium tabular-nums" key={band.level}>
-              {scoreFormat.format(row[band.level])}
+            <td className="text-right" key={band.level}>
+              <ScorePill className={bandBadgeClass[band.level]} score={row[band.level]} />
             </td>
           ))}
           <td className="text-right">
-            <span className="font-semibold tabular-nums">{scoreFormat.format(row.record)}</span>
+            <ScorePill className="badge-accent" score={row.record} />
             <span className="mt-0.5 block text-xs font-normal text-base-content/70">{row.holderName}</span>
           </td>
           <CodedCell code={row.ageDivisionCode} name={ageDivisionName(row.ageDivisionCode)} />
@@ -134,6 +141,12 @@ function RoundRows({
         </tr>
       ))}
     </>
+  );
+}
+
+function ScorePill({ className, score }: { className: string; score: number }) {
+  return (
+    <span className={`badge font-semibold tabular-nums ${className}`}>{scoreFormat.format(score)}</span>
   );
 }
 
